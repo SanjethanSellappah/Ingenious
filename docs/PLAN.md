@@ -1,184 +1,262 @@
 # Plan d'action — application de gestion d'argent personnelle
 
 Ce document découpe l'implémentation décrite dans `docs/CONTEXTE.md`. Il ne
-re-débat aucune décision arbitrée : il les ordonne, comble les trous du modèle
-et fixe ce qui manquait pour pouvoir coder sans ambiguïté.
+re-débat aucune décision arbitrée : il les ordonne, comble les trous du modèle,
+et isole en §2 les quelques points qui doivent être tranchés avant d'écrire du
+code.
 
 ---
 
-## 0. État des lieux
+## 0. État des lieux — 11 septembre 2026
 
-- Dépôt `SanjethanSellappah/Ingenious` : **vide**, aucun commit, aucune branche distante.
-- Branche de travail : `claude/webapp-action-plan-0d67q9`.
-- Toolchain disponible : Node 22.22, npm 10.9, pnpm 10.33.
+**Dépôt public `SanjethanSellappah/Ingenious`** (code, GitHub Pages)
+
+- Une seule branche : `claude/webapp-action-plan-0d67q9`, un seul commit,
+  contenant `docs/CONTEXTE.md` et `docs/PLAN.md`. Aucun code.
+- **Pas de branche `main`.** GitHub a donc désigné la branche de travail comme
+  branche par défaut. À corriger avant le lot 0 (voir §7).
+- GitHub Pages : non activé.
+
+**Dépôt privé `SanjethanSellappah/Ingenious-private`** (données)
+
+- Vide, aucun commit, aucune branche.
+- Rôle : accueillir le journal d'événements sauvegardé, manuellement en phase 1,
+  automatiquement en phase 2 (§6).
+
+**Toolchain** : Node 22.22, npm 10.9, pnpm 10.33.
 
 ---
 
 ## 1. Principes d'exécution
 
-1. **Le noyau avant l'écran.** Tout ce qui est arithmétique (montants, dates,
-   récurrences, projection, estimation) est écrit en TypeScript pur, sans React
+1. **Le noyau avant l'écran.** Tout ce qui est arithmétique — montants, dates,
+   récurrences, projection, estimation — est écrit en TypeScript pur, sans React
    et sans IO, et couvert par des tests unitaires **avant** qu'un composant
    n'existe. C'est là que se logent les bugs coûteux : un décalage de jour ouvré
-   faux se voit six mois plus tard.
-2. **Un lot = un commit vérifiable.** Chaque lot se termine par un livrable
-   qu'on peut constater (tests verts, page déployée, écran utilisable).
+   faux ne se voit que six mois plus tard, et par un chiffre faux, pas par une
+   erreur.
+2. **Un lot = un livrable constatable.** Tests verts, page déployée, écran
+   utilisable. Pas de lot qui ne se vérifie que par relecture.
 3. **L'export existe avant la première vraie saisie.** Tant que le bouton
-   d'export n'est pas livré, ne pas entrer de données réelles : sans filet,
-   la perte est totale.
+   d'export n'est pas livré, ne pas entrer de données réelles : sans filet, la
+   perte est totale et silencieuse.
 4. **Vocabulaire du contexte conservé tel quel** (`solde_cents`, `jour_du_mois`,
-   `regle_weekend`…). Traduire les champs en anglais introduirait une couche de
-   correspondance mentale et donc des bugs ; le code parle français sur le
-   domaine, anglais sur la technique.
+   `regle_weekend`…). Le code parle français sur le domaine, anglais sur la
+   technique. Traduire les champs ajouterait une table de correspondance mentale,
+   donc des bugs.
+5. **Rien ne se calcule sur un `Date`.** Voir §4.2 : une date métier est une
+   chaîne `YYYY-MM-DD`.
 
 ---
 
-## 2. Découpage en lots
+## 2. Arbitrages à confirmer
 
-### Lot 0 — Fondations et déploiement (livrable : page blanche installable en ligne)
+Ce sont les seuls points qui demandent une réponse avant de coder. Chacun a une
+recommandation ; l'absence de réponse vaut acceptation de la recommandation.
+
+### 2.1 Une occurrence réalisée ne crée pas de `Transaction` — *recommandé*
+
+Le contexte dit qu'une occurrence « devient une transaction une fois réellement
+passée » (§3.3) mais aussi que la régularisation « remplace le montant de
+l'occurrence, elle ne crée pas de seconde ligne » (§5.6). Écrire à la fois un
+`OccurrenceOverride` et une `Transaction` porterait le même montant à deux
+endroits : toute correction ultérieure devrait les modifier ensemble, et le jour
+où l'une des deux écritures manque, le solde diverge sans que rien ne le signale.
+
+Retenu : **réaliser une occurrence n'écrit qu'un seul événement**,
+`occurrence.overridden` en statut `realise`. C'est l'état dérivé qui la présente
+comme un mouvement (§4.4), à sa date décalée, avec le label et le compte de
+l'abonnement. « Devient une transaction » est honoré au niveau où la phrase a du
+sens — ce que l'utilisateur voit — sans dupliquer la source de vérité.
+
+Les champs `subscription_id` et `origine = recurrence` de `Transaction` restent
+au modèle : ils serviront en phase 2 à rattacher une ligne de relevé importée en
+CSV à l'abonnement qui l'explique.
+
+### 2.2 Ancre de solde et départage à la journée — *recommandé*
+
+Voir l'invariant en §4.3. Deux mouvements le même jour que la réconciliation
+doivent être départagés par l'horodatage d'événement, sinon la saisie faite après
+une réconciliation du même jour est ignorée du solde. Silencieux, et impossible à
+diagnostiquer plus tard.
+
+### 2.3 La borne pessimiste dépend du sens — *recommandé*
+
+Le contexte fixe l'usage de la borne basse pour une **rentrée** estimée (§5.2).
+Par symétrie, une **dépense** estimée doit être prise à son **maximum** dans la
+même borne : c'est le même principe — le sens de l'erreur compte — appliqué à
+l'autre signe. Règle unique retenue : la borne basse du solde prend, pour chaque
+occurrence estimée, la valeur la plus défavorable de sa fenêtre (min pour une
+rentrée, max pour une dépense) ; la borne haute prend l'inverse.
+
+### 2.4 Les occurrences échues non confirmées n'entrent nulle part — *recommandé*
+
+Une échéance dont la date décalée est passée sans qu'aucun `realise` n'ait été
+saisi : l'application ne sait pas si elle est passée en banque. Elle **ne l'ajoute
+pas au solde** et **ne la projette pas** — la projection démarre strictement après
+aujourd'hui. Elle apparaît dans une liste « à confirmer » sur l'accueil, qui est
+le geste qui recale le solde. Inventer le débit serait mentir, l'ignorer sans le
+dire aussi.
+
+### 2.5 Reste à vivre sans rentrée connue — *recommandé*
+
+La formule §5.2 suppose une prochaine rentrée. S'il n'y en a aucune dans les
+60 jours, l'horizon retenu est la fin du mois courant, et l'écran l'écrit
+explicitement (« aucune rentrée connue d'ici le 30 septembre ») au lieu
+d'afficher un chiffre dont la portée est invisible.
+
+### 2.6 Chiffrement à enveloppe dès la phase 1 — *recommandé*
+
+Dériver la clé de chiffrement directement du PIN crée deux problèmes qui
+n'apparaissent qu'au moment où ils coûtent cher : changer de PIN imposerait de
+re-chiffrer toute la base, et la synchronisation entre deux appareils (phase 2)
+exigerait le même PIN **et** le même sel. Une clé de données aléatoire, enveloppée
+par la clé dérivée du PIN, coûte vingt lignes de plus aujourd'hui : changer le PIN
+ré-enveloppe la clé, et un second appareil reçoit la clé de données par un code de
+récupération affiché à l'écran.
+
+### 2.7 Export en clair par défaut — *recommandé*
+
+Le journal exporté est la seule chose qui survit à un téléphone cassé. En clair,
+il reste lisible et réimportable dans dix ans avec n'importe quel outil. Un export
+chiffré par phrase de passe peut s'ajouter en option, jamais se substituer.
+
+### 2.8 Paramètres de dérivation, et ce que le PIN protège vraiment
+
+PBKDF2-SHA256 via WebCrypto, pas d'Argon2 (qui imposerait un WASM). Itérations
+calibrées à ~500 ms sur le téléphone, plancher 600 000. **À écrire noir sur blanc
+à la configuration** : un PIN à 4 chiffres, c'est 10 000 possibilités — le
+chiffrement protège d'un curieux qui ouvre les outils de développement, pas d'un
+attaquant outillé qui a le téléphone en main. Recommander 6 chiffres. Temporisation
+exponentielle sur échec, et **pas d'effacement automatique** après N essais : avec
+un PIN perdu et aucune récupération, l'effacement serait un piège, pas une
+protection.
+
+---
+
+## 3. Découpage en lots
+
+### Lot 0 — Fondations et déploiement
+*Livrable : une page blanche installable, en ligne.*
 
 - Vite + React + TypeScript, ESLint + Prettier, Vitest.
-- `base: '/Ingenious/'` dans la config Vite (dépôt de projet, pas de domaine).
+- `base: '/Ingenious/'` dans la configuration Vite (dépôt de projet, pas de
+  domaine dédié).
 - `vite-plugin-pwa` : `registerType: 'autoUpdate'`, `start_url` et `scope`
-  alignés sur la base, manifeste, icônes.
-- Routage en **HashRouter** : GitHub Pages ne sait pas réécrire les URL vers
-  `index.html`, et un `404.html` de contournement casse le partage de lien.
-- Workflow GitHub Actions `deploy-pages` sur push de la branche par défaut.
-- **Definition of done** : l'URL Pages répond, l'app s'installe sur l'écran
-  d'accueil du téléphone, `npm run test` passe (à vide).
+  alignés sur la base, manifeste, icônes 192 et 512.
+- Routage en **HashRouter** : GitHub Pages ne réécrit pas les URL vers
+  `index.html`, et le contournement par `404.html` casse le partage de lien.
+- Workflow GitHub Actions de déploiement Pages sur push de `main`.
+- `clock.ts` : un unique `aujourdhui()` retournant la date civile locale,
+  injectable — c'est ce qui rend les tests de projection déterministes.
 
-### Lot 1 — Noyau pur, entièrement testé (livrable : `src/core/` vert)
+**Terminé quand** : l'URL Pages répond, l'app s'installe sur l'écran d'accueil du
+téléphone, `npm run test` passe à vide.
+
+### Lot 1 — Noyau pur, entièrement testé
+*Livrable : `src/core/` vert.*
 
 Aucun React, aucun IO. Chaque module a son `*.test.ts`.
 
-- `money.ts` — entiers centimes, parsing FR (`12,50` et `12.50`), formatage,
-  un unique `roundCents` utilisé partout.
-- `civilDate.ts` — dates métier en chaînes `YYYY-MM-DD`, jamais d'objet `Date`
-  ni d'epoch (voir §4). Arithmétique mois/jours, fin de mois, comparaisons.
-- `holidaysFR.ts` — les 11 jours fériés, Pâques par Meeus, Ascension +39,
-  lundi de Pentecôte +50. Zéro dépendance, toutes années.
-- `recurrence.ts` — génération des occurrences théoriques entre deux dates
-  (`mensuel`/`trimestriel`/`annuel`/`personnalise`, `intervalle`,
-  `jour_du_mois`, `regle_mois_court`), puis `dateAffichee()` appliquant
-  `regle_weekend`. **La théorique est la clé, la décalée est un affichage.**
+- `money.ts` — entiers centimes, parsing FR (`12,50` et `12.50`), formatage, un
+  unique `roundCents` utilisé partout.
+- `civilDate.ts` — dates métier en chaînes `YYYY-MM-DD`. Arithmétique jours/mois,
+  fin de mois, comparaisons, jamais de `Date` intermédiaire.
+- `holidaysFR.ts` — les 11 fériés, Pâques par Meeus, Ascension +39, lundi de
+  Pentecôte +50. Zéro dépendance, toutes années.
+- `recurrence.ts` — occurrences théoriques entre deux dates (`mensuel`,
+  `trimestriel`, `annuel`, `personnalise`, `intervalle`, `jour_du_mois`,
+  `regle_mois_court`), puis `dateAffichee()` appliquant `regle_weekend`.
+  **La théorique est la clé, la décalée est un affichage.**
 - `estimation.ts` — médiane sur la fenêtre glissante des occurrences réalisées,
-  exclusions respectées, retour `{ median, min, max, echantillon }`.
+  exclusions respectées, retour `{ mediane, min, max, echantillon }`.
+  Fenêtre paire : moyenne des deux valeurs centrales, arrondie par `roundCents`.
 - `projection.ts` — série jour par jour **par compte**, point bas et sa date,
-  date de la première occurrence estimée, bornes basse et haute au-delà.
+  date de la première occurrence estimée, bornes basse et haute au-delà (§2.3).
+  Prend aussi les transactions futures ponctuelles déjà saisies, pas seulement
+  les récurrences.
 - `resteAVivre.ts` — solde courant − échéances jusqu'à la prochaine rentrée −
-  réserve, **avec la borne basse sur toute rentrée estimée**.
+  réserve, borne pessimiste sur tout montant estimé, horizon de repli §2.5.
 
-**Definition of done** : cas limites couverts — 31 février, abonnement au 31 en
-février, échéance un 1er mai, année bissextile, fenêtre d'estimation vide,
-fenêtre de taille paire, changement de tarif à cheval sur une échéance.
+**Terminé quand** ces cas passent : 31 février, abonnement au 31 en février,
+échéance un 1er mai, échéance un samedi avec chacune des trois règles, année
+bissextile, fenêtre d'estimation vide, fenêtre de taille paire, changement de
+tarif à cheval sur une échéance, projection sans aucune rentrée.
 
-### Lot 2 — Persistance et chiffrement (livrable : un journal qui survit au rechargement)
+### Lot 2 — Persistance et chiffrement
+*Livrable : un journal qui survit au rechargement.*
 
-- `events.ts` — union discriminée de tous les types d'événements, avec
-  validation à l'écriture **et à la lecture** (un import corrompu ne doit pas
-  faire planter le pliage).
-- Dexie : deux tables seulement. `events` (blobs chiffrés, clé `id`) et `meta`
-  (sel, paramètres de dérivation, DEK enveloppée, identifiant d'appareil).
-  Le journal n'est jamais interrogé par contenu, donc le chiffrement ne coûte
-  aucun index : on déchiffre tout au démarrage et on plie en mémoire.
-- `crypto.ts` — **chiffrement à enveloppe** (voir §3.1) : PBKDF2-SHA256 sur le
-  PIN → clé de chiffrement de clé, qui enveloppe une clé de données aléatoire.
-  AES-GCM, IV aléatoire par enregistrement.
-- Chiffreur « identité » tant qu'aucun PIN n'est configuré : c'est le
-  comportement réel avant l'onboarding, et ça garde le débogage lisible.
+- `events.ts` — union discriminée de tous les types d'événements, avec validation
+  à l'écriture **et à la lecture** : un import corrompu ne doit pas faire planter
+  le pliage, il doit rejeter l'événement fautif en le nommant.
+- Dexie, deux tables seulement : `events` (enregistrements chiffrés, clé `id`) et
+  `meta` (sel, paramètres de dérivation, clé de données enveloppée, identifiant
+  d'appareil). Le journal n'est jamais interrogé par contenu, donc le chiffrement
+  ne coûte aucun index : on déchiffre tout au démarrage et on plie en mémoire.
+- `crypto.ts` — chiffrement à enveloppe (§2.6), AES-GCM, IV aléatoire par
+  enregistrement.
+- Chiffreur « identité » tant qu'aucun PIN n'est configuré : c'est l'état réel
+  avant l'onboarding, et ça garde le débogage lisible.
 - `navigator.storage.persist()` au premier lancement, résultat journalisé et
-  affiché dans Réglages (voir §5 pour le cas iOS).
+  affiché dans Réglages (§5).
 - `repository.ts` — `append()`, `loadAll()`, `exportJson()`, `importJson()`
   (union sur `id`, jamais d'écrasement).
 
-**Definition of done** : on ajoute des événements, on recharge, tout est là ;
-on exporte, on vide la base, on réimporte, l'état est identique.
+**Terminé quand** : on ajoute des événements, on recharge, tout est là ; on
+exporte, on vide la base, on réimporte, l'état dérivé est identique au bit près.
 
-### Lot 3 — État dérivé (livrable : sélecteurs testés sur journal synthétique)
+### Lot 3 — État dérivé
+*Livrable : sélecteurs testés sur journal synthétique.*
 
-- Pliage du journal trié par `ts` puis `id` → comptes, transactions, virements,
-  labels, abonnements, historique de prix, exceptions, instantanés.
+- Pliage du journal trié par `ts` puis `id` → comptes, mouvements, labels,
+  abonnements, historique de prix, exceptions, instantanés.
+- Vue **mouvement** unifiée (§4.4) : transactions, virements, occurrences
+  réalisées. Les virements y portent leur nature et sont exclus par construction
+  de tout total de dépenses.
 - Résolution du montant d'une occurrence : réalisé > prévisionnel > estimation.
-- Prix d'abonnement valide **à la date de l'échéance**, pas le prix courant.
-- Invariants du §4 vérifiés par tests.
+- Prix d'abonnement valide **à la date de l'échéance**, jamais le prix courant.
+- Invariant de solde §4.3 vérifié par tests, réconciliation comprise.
 
-### Lot 4 — Coquille applicative (livrable : navigation et verrou)
+### Lot 4 — Coquille applicative
+*Livrable : navigation et verrou.*
 
 - Cinq onglets en barre basse : Accueil · Calendrier · Ajout · Comptes · Réglages.
 - Écran de verrouillage PIN, re-verrouillage sur `visibilitychange` après délai.
-- Jetons de design, composants `Montant` (signe + icône, jamais la couleur
-  seule), `SaisieMontant` (`inputmode="decimal"`, virgule acceptée).
-- Onboarding en 3 étapes : compte courant + solde, salaire en rentrée estimée
-  avec montant de départ, trois abonnements.
+- Jetons de design ; composant `Montant` (signe et icône, jamais la couleur
+  seule) ; `SaisieMontant` (`inputmode="decimal"`, virgule acceptée).
+- Onboarding en 3 étapes : compte courant et son solde ; salaire en rentrée
+  estimée avec un montant de départ ; trois abonnements. Plus l'invitation à
+  installer sur l'écran d'accueil, qui est la vraie protection contre la purge.
 
 ### Lot 5 — Écrans, par ordre d'utilité quotidienne
 
-1. **Accueil** — reste à vivre en gros, solde projeté du courant, alerte point
-   bas, prochaines échéances, et **de quoi le chiffre est composé**
-   (« 7 échéances connues »), frontière trait plein / pointillé.
-2. **Ajout rapide** — montant d'abord, bascule entrée/sortie/virement.
+1. **Accueil** — reste à vivre en gros ; solde projeté du courant ; alerte de
+   point bas ; prochaines échéances ; **occurrences à confirmer** (§2.4) ; et de
+   quoi le chiffre est composé (« 7 échéances connues, 2 estimées »), avec la
+   frontière trait plein / pointillé.
+2. **Ajout rapide** — montant d'abord, bascule entrée / sortie / virement.
 3. **Réconciliation hebdomadaire** — saisie du solde réel, écart matérialisé en
-   transaction « Non catégorisé », `origine = reconciliation`.
-4. **Comptes** — patrimoine, regroupement bancaire/investissement, virement.
-5. **Abonnements** + formulaire complet avec aperçu des trois prochaines
+   transaction « Non catégorisé », `origine = reconciliation`, nouvelle ancre.
+4. **Comptes** — patrimoine, regroupement bancaire / investissement, virement.
+5. **Abonnements** et formulaire complet, avec aperçu des trois prochaines
    échéances en dates décalées.
-6. **Calendrier** — grille mensuelle, pastilles, courbe en dessous.
-7. **Dépenses par label** — total du mois, barres, suivi de budget.
+6. **Calendrier** — grille mensuelle, pastilles d'échéance, courbe en dessous.
+7. **Dépenses par label** — total du mois, barres proportionnelles, budget.
 8. **Détail de compte** — relevés d'un compte `saisi`.
 9. **Réglages** — PIN, réserve, export, import, labels, état du stockage.
 
 ### Lot 6 — Filet et automatismes
 
-- Instantané quotidien par compte déclenché à l'ouverture ; trous reliés, jamais
-  comblés par des valeurs inventées.
-- Rappel mensuel de sauvegarde.
-- Régularisation de fin de mois : le réel **remplace** le montant de
-  l'occurrence, l'écart est affiché sans être écrit.
+- Instantané quotidien par compte déclenché à l'ouverture ; les trous se relient,
+  ne se comblent jamais par des valeurs inventées.
+- Rappel mensuel de sauvegarde, et l'export qui va avec (§6).
+- Régularisation de fin de mois : le réel remplace le montant de l'occurrence,
+  l'écart avec l'estimation est affiché sans être écrit.
 
 ### Lot 7 — Finitions
 
-Accessibilité (aucune information par la couleur seule, tailles de cible,
-contrastes), comportement hors ligne, performance du pliage, `README`.
-
----
-
-## 3. Décisions techniques à acter
-
-Elles complètent le contexte sans le contredire. Recommandation par défaut
-retenue sauf avis contraire.
-
-### 3.1 Chiffrement à enveloppe dès la phase 1 — *recommandé*
-
-Dériver directement la clé de chiffrement depuis le PIN pose deux problèmes qui
-n'apparaissent qu'au moment où il est coûteux de les résoudre : changer de PIN
-imposerait de re-chiffrer toute la base, et la synchronisation entre deux
-appareils (phase 2) exigerait le même PIN **et** le même sel, ce qui n'est pas
-tenable. Une clé de données aléatoire, enveloppée par la clé dérivée du PIN,
-coûte vingt lignes de plus aujourd'hui et rend les deux cas triviaux : changer
-le PIN ré-enveloppe la clé, et un second appareil reçoit la clé de données par
-un code de récupération affiché à l'écran.
-
-### 3.2 Paramètres de dérivation
-
-PBKDF2-SHA256, WebCrypto, pas d'Argon2 (qui imposerait un WASM). Itérations
-calibrées à ~500 ms sur le téléphone, plancher 600 000. **À dire franchement à
-la configuration** : un PIN à 4 chiffres, c'est 10 000 possibilités — le
-chiffrement protège d'un curieux qui ouvre les outils de développement, pas d'un
-attaquant outillé qui a le téléphone. Recommander 6 chiffres. Temporisation
-exponentielle sur échec, **pas d'effacement automatique** après N essais : avec
-un code perdu et aucune récupération, ce serait un piège.
-
-### 3.3 Export en clair par défaut — *recommandé*
-
-Le journal exporté est la seule chose qui survit à un téléphone cassé. En clair,
-il reste lisible et réimportable dans dix ans avec n'importe quoi. Option
-d'export chiffré par phrase de passe en supplément, jamais à la place.
-
-### 3.4 État applicatif
-
-Un magasin minimal (`useSyncExternalStore` sur un module, ou Zustand) contenant
-l'état déplié, recalculé à chaque `append()`. Pas de Redux : le journal joue
-déjà ce rôle.
+Accessibilité (aucune information portée par la seule couleur, taille des cibles,
+contrastes), comportement hors ligne, coût du pliage au démarrage, `README`.
 
 ---
 
@@ -189,7 +267,7 @@ déjà ce rôle.
 La liste du contexte ne couvre pas certaines écritures pourtant nécessaires :
 
 - `occurrence.overridden` / `occurrence.override_cleared` — **le plus important** :
-  les `OccurrenceOverride` sont décrits comme entité mais aucun événement ne
+  les `OccurrenceOverride` sont décrits comme entité, mais aucun événement ne
   permet de les créer. Charge utile : `subscription_id`, `date_theorique`,
   `montant_cents`, `statut`, `exclu_de_estimation`.
 - `transfer.updated` / `transfer.deleted` — un virement se corrige comme une
@@ -198,55 +276,128 @@ La liste du contexte ne couvre pas certaines écritures pourtant nécessaires :
 - `account.unarchived` — symétrique de `account.archived`.
 - `settings.updated` — la réserve du reste à vivre doit vivre dans le journal,
   sinon elle ne suit pas l'export.
-- `instrument.created` / `instrument.updated` — phase 2, à réserver maintenant.
+- `instrument.created` / `instrument.updated` — phase 2, à réserver maintenant
+  pour ne pas renuméroter le format plus tard.
 
 ### 4.2 Dates : chaînes civiles, jamais d'objet `Date`
 
-Une date métier est une chaîne `YYYY-MM-DD`. Un `Date` ou un epoch pour « le 3
-du mois » finit par se décaler d'un jour selon le fuseau et l'heure de saisie —
-c'est le bug classique de ce type d'application, et il est silencieux.
-Seul `Event.ts` est un epoch, parce que c'est un instant, pas une date.
+Une date métier est une chaîne `YYYY-MM-DD`. Un `Date` ou un epoch pour « le 3 du
+mois » finit par se décaler d'un jour selon le fuseau et l'heure de saisie — c'est
+le bug classique de ce type d'application, et il est silencieux. Seul `Event.ts`
+est un epoch, parce que c'est un instant, pas une date.
 
-### 4.3 `Snapshot` et `BalanceEntry` ne font pas doublon
+### 4.3 Invariant de solde d'un compte `saisi`
 
-- `BalanceEntry` = ce que **l'utilisateur a relevé** (événement `account.balance_set`).
+Soit l'**ancre** = le dernier `account.balance_set` de date ≤ J (départage par
+`ts` d'événement).
+
+```
+solde(compte, J) = ancre.valeur
+                 + Σ mouvements m du compte tels que
+                     ( m.date > ancre.date
+                       ou (m.date = ancre.date et m.event_ts > ancre.event_ts) )
+                     et m.date ≤ J
+```
+
+La réconciliation écrit **dans cet ordre** : la transaction d'écart, puis la
+nouvelle ancre. L'écart est donc porté par une ligne visible dans les dépenses du
+mois, sans être compté deux fois dans le solde — l'ancre le contient déjà. Le
+départage par `ts` est ce qui permet de saisir une dépense après avoir réconcilié
+le même jour sans qu'elle disparaisse du calcul.
+
+Corollaire utile : la réconciliation est auto-corrective. Tout ce qui manquait —
+occurrence non confirmée, dépense oubliée — finit dans l'écart.
+
+### 4.4 Vue « mouvement » unifiée
+
+Un mouvement est `{ compte_id, date, montant_cents, nature, label_id?, source }`
+où `nature` ∈ `transaction` | `virement` | `occurrence`. Elle produit :
+
+- le solde (§4.3),
+- la projection,
+- les dépenses par label — les virements en sont exclus par leur `nature`, et les
+  occurrences réalisées y apportent le label de leur abonnement, ce qui est
+  exactement ce que demande le contexte §4.2 sans double saisie.
+
+### 4.5 `Snapshot` et `BalanceEntry` ne font pas doublon
+
+- `BalanceEntry` = ce que **l'utilisateur a relevé** (`account.balance_set`).
 - `Snapshot` = ce que **l'application a constaté** à l'ouverture, pour la courbe
-  de patrimoine (événement `snapshot.recorded`).
+  de patrimoine (`snapshot.recorded`).
 
-Les confondre reviendrait soit à réécrire le passé, soit à perdre la courbe les
+Les confondre revient soit à réécrire le passé, soit à perdre la courbe les
 semaines sans relevé.
 
-### 4.4 Invariant de solde d'un compte `saisi`
+### 4.6 État applicatif
 
-```
-solde(compte) = dernier account.balance_set à la date D
-              + Σ transactions et virements de date > D
-```
-
-C'est ce qui rend la réconciliation cohérente : elle pose un nouveau
-`balance_set` **et** écrit l'écart en transaction, si bien que le calcul et le
-relevé se rejoignent au lieu de diverger.
-
-### 4.5 Médiane sur fenêtre paire
-
-Moyenne des deux valeurs centrales, arrondie au centime le plus proche par
-`roundCents`. À figer pour que les tests soient déterministes.
+Un magasin minimal — `useSyncExternalStore` sur un module, ou Zustand — contenant
+l'état déplié, recalculé à chaque `append()`. Pas de Redux : le journal joue déjà
+ce rôle, et mieux.
 
 ---
 
-## 5. Réponse au point laissé ouvert : persistance sur iOS
+## 5. Le point laissé ouvert : persistance sur iOS
 
 Le contexte demandait de vérifier au moment de coder. `navigator.storage.persist()`
-n'accorde rien sur Safari iOS : la protection réelle contre la purge après sept
-jours d'inactivité, c'est **l'installation sur l'écran d'accueil**. L'appel reste
-à faire (il est utile sur Chrome et sur macOS), mais l'onboarding doit insister
-sur l'installation, et Réglages doit afficher l'état obtenu plutôt que de le
-supposer. Conséquence assumée : l'export mensuel n'est pas un confort, c'est
-la vraie sauvegarde.
+n'accorde rien sur Safari iOS ; la protection réelle contre la purge après sept
+jours d'inactivité, c'est **l'installation sur l'écran d'accueil**. L'appel reste à
+faire — il est utile sur Chrome et sur macOS — mais l'onboarding doit insister sur
+l'installation, et Réglages doit afficher l'état réellement obtenu plutôt que de le
+supposer. Conséquence assumée : l'export mensuel n'est pas un confort, c'est la
+sauvegarde.
 
 ---
 
-## 6. Arborescence cible
+## 6. Les deux dépôts
+
+| | `Ingenious` (public) | `Ingenious-private` (privé) |
+|---|---|---|
+| Contenu | code, docs, workflow Pages | journal d'événements sauvegardé |
+| Secrets | **aucun, jamais** | aucun non plus : ni PIN, ni clé |
+| Phase 1 | source de l'app déployée | dépôt de l'export manuel |
+| Phase 2 | inchangé | cible de la synchronisation automatique |
+
+Le dépôt privé reçoit dès maintenant un journal **vierge** au format d'export, et
+le `README` qui décrit l'enveloppe. Ainsi le format de sauvegarde existe avant la
+première donnée réelle, et le passage du manuel à l'automatique en phase 2 ne
+change qu'une chose : un bouton devient un appel réseau.
+
+Enveloppe d'export, en clair (phase 1) :
+
+```json
+{
+  "format": "ingenious.journal",
+  "version": 1,
+  "chiffre": false,
+  "genere_le": "2026-09-11T00:00:00.000Z",
+  "appareil": null,
+  "events": []
+}
+```
+
+Chiffrée (option §2.7, et phase 2), les mêmes champs d'en-tête, `chiffre: true`,
+plus `kdf`, `iv` et `ciphertext` ; `events` disparaît. L'en-tête reste en clair :
+il faut pouvoir lire la version d'un fichier qu'on ne sait pas encore déchiffrer.
+
+**Le dépôt privé n'est pas une sauvegarde à lui seul.** Un dépôt GitHub privé est
+un second exemplaire, pas un coffre : garder aussi une copie locale de l'export.
+
+---
+
+## 7. Ce qui doit être fait dans l'interface GitHub
+
+Ces trois actions ne sont pas accessibles depuis le code et bloquent le lot 0 :
+
+1. **Créer la branche `main` et la désigner par défaut.** Aujourd'hui la branche
+   par défaut est une branche de travail ; le workflow Pages se déclencherait sur
+   une branche vouée à disparaître.
+2. **Activer GitHub Pages** sur le dépôt public, source « GitHub Actions ».
+3. Phase 2 seulement : créer un jeton à portée restreinte au dépôt privé, saisi
+   dans l'application sur chaque appareil. **Jamais dans le dépôt de code.**
+
+---
+
+## 8. Arborescence cible
 
 ```
 src/
@@ -261,8 +412,15 @@ src/
 
 ---
 
-## 7. Hors périmètre phase 1
+## 9. Hors périmètre phase 1
 
-Mode `calculé` et cours de bourse, synchronisation automatique par dépôt privé,
-import CSV, suivi fiscal, vue à douze mois. Le PEA et l'or existent dès la
-phase 1 **en mode `saisi`**.
+Mode `calculé` et cours de bourse, synchronisation automatique, import CSV, suivi
+fiscal, vue à douze mois. Le PEA et l'or existent dès la phase 1 **en mode
+`saisi`**.
+
+---
+
+## 10. Prochaine étape
+
+Répondre aux arbitrages §2 — ou n'en contester aucun — puis attaquer le lot 0,
+en parallèle des trois actions §7 qui le conditionnent.
