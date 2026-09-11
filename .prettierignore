@@ -1,0 +1,8 @@
+dist/
+dev-dist/
+coverage/
+package-lock.json
+public/
+# Prose mise en forme à la main : Prettier ré-enroulerait les paragraphes.
+*.md
+docs/

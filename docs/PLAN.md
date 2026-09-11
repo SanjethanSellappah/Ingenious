@@ -136,7 +136,7 @@ protection.
 
 ## 3. Découpage en lots
 
-### Lot 0 — Fondations et déploiement
+### Lot 0 — Fondations et déploiement ✅
 *Livrable : une page blanche installable, en ligne.*
 
 - Vite + React + TypeScript, ESLint + Prettier, Vitest.
@@ -152,6 +152,11 @@ protection.
 
 **Terminé quand** : l'URL Pages répond, l'app s'installe sur l'écran d'accueil du
 téléphone, `npm run test` passe à vide.
+
+*Livré.* Vérifié en local sur un contexte mobile : le service worker contrôle la
+page, l'application se recharge réseau coupé, une route de hash inconnue rend la
+même page. Reste la vérification qui dépend de GitHub : l'URL Pages, une fois les
+deux réglages du §7 faits.
 
 ### Lot 1 — Noyau pur, entièrement testé
 *Livrable : `src/core/` vert.*
@@ -422,5 +427,7 @@ fiscal, vue à douze mois. Le PEA et l'or existent dès la phase 1 **en mode
 
 ## 10. Prochaine étape
 
-Répondre aux arbitrages §2 — ou n'en contester aucun — puis attaquer le lot 0,
-en parallèle des trois actions §7 qui le conditionnent.
+Lot 0 livré. La suite est le **lot 1**, le noyau de calcul — c'est lui qui porte
+les arbitrages §2.1 à §2.5, qui ne coûtent rien tant qu'aucune donnée réelle
+n'existe et deviennent chers ensuite. Les deux réglages GitHub du §7 sont à faire
+en parallèle : sans eux, rien n'est publié.

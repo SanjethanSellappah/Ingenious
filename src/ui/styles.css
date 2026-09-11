@@ -1,0 +1,43 @@
+/*
+ * Jetons de design minimaux du lot 0. Le jeu complet arrive avec la coquille
+ * applicative (lot 4) ; ici, seulement de quoi ne pas livrer une page blanche
+ * sans fondation : fond, encre, police système, zone sûre du téléphone.
+ */
+
+:root {
+  --fond: #0f172a;
+  --fond-carte: #1a243b;
+  --encre: #e8edf7;
+  --encre-faible: #9aa8c4;
+  --trait: #2b3a57;
+  --accent: #4ade80;
+
+  color-scheme: dark;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--fond);
+  color: var(--encre);
+  /* Encoche et barre d'accueil : l'application tourne en plein écran une fois installée. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+  -webkit-tap-highlight-color: transparent;
+}
+
+#root {
+  min-height: 100dvh;
+}
