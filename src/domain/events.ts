@@ -157,15 +157,23 @@ const VALIDATEURS: Record<
     }),
   'transaction.deleted': (p, c) => ({ id: chaine(p.id, `${c}.id`) }),
 
-  'transfer.created': (p, c) =>
-    sansIndefinis({
+  'transfer.created': (p, c) => {
+    const depuis = chaine(p.from_account_id, `${c}.from_account_id`)
+    const vers = chaine(p.to_account_id, `${c}.to_account_id`)
+    // Un virement d'un compte vers lui-même n'a pas de sens, et le pliage n'en
+    // produirait qu'un seul mouvement : l'argent disparaîtrait sans trace.
+    if (depuis === vers) {
+      throw new ErreurValidation(`${c}.to_account_id`, 'un virement ne peut pas viser son compte de départ')
+    }
+    return sansIndefinis({
       id: chaine(p.id, `${c}.id`),
       date: dateCivileChamp(p.date, `${c}.date`),
-      from_account_id: chaine(p.from_account_id, `${c}.from_account_id`),
-      to_account_id: chaine(p.to_account_id, `${c}.to_account_id`),
+      from_account_id: depuis,
+      to_account_id: vers,
       montant_cents: entier(p.montant_cents, `${c}.montant_cents`, { min: 1 }),
       note: optionnel(p.note, (v) => chaine(v, `${c}.note`, { min: 0, max: 500 })),
-    }),
+    })
+  },
   'transfer.updated': (p, c) =>
     sansIndefinis({
       id: chaine(p.id, `${c}.id`),
