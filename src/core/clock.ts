@@ -9,9 +9,9 @@
  * La source d'instant est remplaçable, parce qu'un test de projection qui dépend
  * du jour où il tourne n'est pas un test.
  */
+import { depuisComposantes, type CivilDate } from './civilDate'
 
-/** Date civile au format `YYYY-MM-DD`. Le noyau de typage arrive avec `civilDate.ts` (lot 1). */
-export type CivilDate = string
+export type { CivilDate }
 
 /** Source d'instant. Remplacée en test, jamais en production. */
 export type SourceInstant = () => Date
@@ -36,12 +36,9 @@ export function aujourdhui(): CivilDate {
   return dateCivileLocale(source())
 }
 
-/** Composantes locales d'un instant, formatées en `YYYY-MM-DD`. */
+/** Composantes locales d'un instant, converties en date civile. */
 export function dateCivileLocale(instant: Date): CivilDate {
-  const annee = String(instant.getFullYear()).padStart(4, '0')
-  const mois = String(instant.getMonth() + 1).padStart(2, '0')
-  const jour = String(instant.getDate()).padStart(2, '0')
-  return `${annee}-${mois}-${jour}`
+  return depuisComposantes(instant.getFullYear(), instant.getMonth() + 1, instant.getDate())
 }
 
 /** Fixe la source d'instant. Réservé aux tests. */

@@ -39,7 +39,26 @@ dépôt, sans quoi le workflow échoue :
 L'application est servie sous `/Ingenious/` (`base` dans `vite.config.ts`) et
 route par hash : GitHub Pages ne réécrit pas les URL vers `index.html`.
 
+## Noyau de calcul
+
+`src/core/` est du TypeScript pur, sans React ni IO, entièrement testé. C'est là
+que vivent les décisions qui coûtent cher à défaire :
+
+| Module | Rôle |
+|---|---|
+| `money.ts` | entiers centimes, parsing FR, un seul arrondi |
+| `civilDate.ts` | dates `YYYY-MM-DD`, arithmétique sans objet `Date` |
+| `holidaysFR.ts` | les 11 fériés, Pâques par Meeus |
+| `recurrence.ts` | occurrences théoriques, décalage jour ouvré à l'affichage |
+| `estimation.ts` | médiane sur fenêtre glissante, résolution du montant |
+| `prixAbonnement.ts` | montant valide à une date donnée |
+| `echeances.ts` | des règles aux échéances valorisées et encadrées |
+| `projection.ts` | solde jour par jour, point bas, bornes |
+| `resteAVivre.ts` | le chiffre de l'accueil, toujours pessimiste |
+| `clock.ts` | seul endroit où un instant devient une date civile |
+
 ## État
 
-Lot 0 livré : fondations, PWA installable, déploiement. Le noyau de calcul
-(montants, dates, récurrences, projection) est le lot 1.
+Lots 0 et 1 livrés : fondations, PWA installable, déploiement, noyau de calcul.
+La persistance et le chiffrement sont le lot 2 — **ne pas saisir de données
+réelles avant que l'export existe.**

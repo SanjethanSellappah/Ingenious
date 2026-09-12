@@ -7,23 +7,22 @@ code.
 
 ---
 
-## 0. État des lieux — 11 septembre 2026
+## 0. État des lieux — 12 septembre 2026
 
 **Dépôt public `SanjethanSellappah/Ingenious`** (code, GitHub Pages)
 
-- Une seule branche : `claude/webapp-action-plan-0d67q9`, un seul commit,
-  contenant `docs/CONTEXTE.md` et `docs/PLAN.md`. Aucun code.
-- **Pas de branche `main`.** GitHub a donc désigné la branche de travail comme
-  branche par défaut. À corriger avant le lot 0 (voir §7).
-- GitHub Pages : non activé.
+- Branche `main` créée, lots 0 et 1 livrés dessus.
+- Le workflow Pages passe et publie : lint, tests et build verts, déploiement
+  réussi. Reste à faire dans l'interface GitHub : désigner `main` comme branche
+  par défaut (§7).
 
 **Dépôt privé `SanjethanSellappah/Ingenious-private`** (données)
 
-- Vide, aucun commit, aucune branche.
-- Rôle : accueillir le journal d'événements sauvegardé, manuellement en phase 1,
-  automatiquement en phase 2 (§6).
+- Journal vierge et règles du dépôt en place. Rien d'autre tant que l'export
+  n'existe pas (lot 2).
 
-**Toolchain** : Node 22.22, npm 10.9, pnpm 10.33.
+**Toolchain** : Node 22.22, npm 10.9. TypeScript 6.0.3 — pas la 7.0.2, que
+`typescript-eslint` ne supporte pas encore (plafond `<6.1`).
 
 ---
 
@@ -80,14 +79,18 @@ doivent être départagés par l'horodatage d'événement, sinon la saisie faite
 une réconciliation du même jour est ignorée du solde. Silencieux, et impossible à
 diagnostiquer plus tard.
 
-### 2.3 La borne pessimiste dépend du sens — *recommandé*
+### 2.3 La borne pessimiste dépend du sens — *implémenté*
 
 Le contexte fixe l'usage de la borne basse pour une **rentrée** estimée (§5.2).
 Par symétrie, une **dépense** estimée doit être prise à son **maximum** dans la
 même borne : c'est le même principe — le sens de l'erreur compte — appliqué à
-l'autre signe. Règle unique retenue : la borne basse du solde prend, pour chaque
-occurrence estimée, la valeur la plus défavorable de sa fenêtre (min pour une
-rentrée, max pour une dépense) ; la borne haute prend l'inverse.
+l'autre signe.
+
+À l'écriture, la règle s'est révélée plus simple que son énoncé. Les montants
+étant signés, « la plus maigre des rentrées » et « la plus grosse des dépenses »
+sont la même chose : **la plus petite valeur signée**. La borne basse accumule
+donc toujours le minimum, la borne haute toujours le maximum, sans distinguer
+les deux sens — donc sans pouvoir se tromper de côté sur l'un des deux.
 
 ### 2.4 Les occurrences échues non confirmées n'entrent nulle part — *recommandé*
 
@@ -158,7 +161,7 @@ page, l'application se recharge réseau coupé, une route de hash inconnue rend 
 même page. Reste la vérification qui dépend de GitHub : l'URL Pages, une fois les
 deux réglages du §7 faits.
 
-### Lot 1 — Noyau pur, entièrement testé
+### Lot 1 — Noyau pur, entièrement testé ✅
 *Livrable : `src/core/` vert.*
 
 Aucun React, aucun IO. Chaque module a son `*.test.ts`.
@@ -187,6 +190,20 @@ Aucun React, aucun IO. Chaque module a son `*.test.ts`.
 échéance un 1er mai, échéance un samedi avec chacune des trois règles, année
 bissextile, fenêtre d'estimation vide, fenêtre de taille paire, changement de
 tarif à cheval sur une échéance, projection sans aucune rentrée.
+
+*Livré*, 177 tests. Deux ajouts par rapport à la liste ci-dessus :
+
+- `prixAbonnement.ts` — le montant valide à une date. Il était réclamé par la
+  liste des cas à couvrir sans figurer dans les modules ; le placer dans le
+  noyau plutôt que dans le pliage rend le lot 3 plus mince.
+- `echeances.ts` — le point de jonction : une récurrence, ses prix, ses
+  exceptions et ses occurrences réalisées entrent, des échéances datées, signées
+  et encadrées sortent. C'est ce que consomment la projection et le reste à
+  vivre, et c'est ce que les écrans appelleront.
+
+Ce qui ne peut pas être valorisé — un abonnement estimé sans historique, une
+échéance antérieure à tout tarif connu — est rendu à part, jamais compté zéro :
+l'écran doit le réclamer, pas faire comme si le montant était nul.
 
 ### Lot 2 — Persistance et chiffrement
 *Livrable : un journal qui survit au rechargement.*
@@ -283,6 +300,15 @@ La liste du contexte ne couvre pas certaines écritures pourtant nécessaires :
   sinon elle ne suit pas l'export.
 - `instrument.created` / `instrument.updated` — phase 2, à réserver maintenant
   pour ne pas renuméroter le format plus tard.
+
+### 4.1 bis Unité de l'intervalle d'une récurrence `personnalise`
+
+Le contexte donne `frequence: personnalise` et `intervalle: int` sans dire en
+quoi l'intervalle est compté. Les deux lectures sont défendables — tous les N
+mois, ou tous les N jours — et se départagent mal sans le cas d'usage. Plutôt
+que de trancher en silence, la règle porte un champ `unite_intervalle`
+(`mois` | `semaine` | `jour`), **défaut `mois`**, qui n'a de sens que pour
+`personnalise` : les autres fréquences imposent la leur, 1, 3 ou 12 mois.
 
 ### 4.2 Dates : chaînes civiles, jamais d'objet `Date`
 
@@ -427,7 +453,11 @@ fiscal, vue à douze mois. Le PEA et l'or existent dès la phase 1 **en mode
 
 ## 10. Prochaine étape
 
-Lot 0 livré. La suite est le **lot 1**, le noyau de calcul — c'est lui qui porte
-les arbitrages §2.1 à §2.5, qui ne coûtent rien tant qu'aucune donnée réelle
-n'existe et deviennent chers ensuite. Les deux réglages GitHub du §7 sont à faire
-en parallèle : sans eux, rien n'est publié.
+Lots 0 et 1 livrés. La suite est le **lot 2**, persistance et chiffrement — donc
+l'export, qui est la règle §1.3 : **aucune donnée réelle ne doit être saisie
+avant que le bouton d'export existe.** C'est aussi le lot qui tranche §2.6 à
+§2.8, sur le chiffrement.
+
+Les arbitrages §2.1 à §2.5 sont tous implémentés dans le noyau et couverts par
+les tests. Ils restent contestables tant qu'aucune donnée réelle n'existe ; après,
+ils deviennent chers à défaire.
