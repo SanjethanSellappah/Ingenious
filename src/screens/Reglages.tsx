@@ -42,21 +42,44 @@ export function Reglages({
   const champFichier = useRef<HTMLInputElement>(null)
   const rappel = rappelSauvegarde()
 
+  /**
+   * Export du journal.
+   *
+   * Tout le filet de sécurité de cette application tient à ce bouton : sans
+   * serveur, un téléphone perdu sans export, c'est tout perdu. Il doit donc
+   * marcher là où l'application est censée vivre — installée sur un iPhone —
+   * et `<a download>` y est précisément ce qui ne marche pas : Safari l'ignore
+   * pour une URL blob et ouvre le contenu dans un onglet. L'utilisateur croit
+   * avoir sauvegardé, le rappel disparaît, et il n'a aucun fichier.
+   *
+   * D'où l'ordre : la feuille de partage quand le navigateur sait la faire —
+   * c'est elle qui donne « Enregistrer dans Fichiers » sur iOS — et le lien de
+   * téléchargement sinon. Le rappel n'est effacé que si quelque chose a
+   * réellement eu lieu : un partage annulé n'est pas une sauvegarde.
+   */
   async function exporter() {
     const depot = depotCourant()
-    if (!depot) return
+    if (!depot) {
+      setMessage('Le journal n’est pas encore ouvert. Réessayez dans un instant.')
+      return
+    }
     setOccupe(true)
+    setRefus([])
     try {
       const texte = await depot.exporterTexte()
-      const lien = document.createElement('a')
-      lien.href = URL.createObjectURL(new Blob([texte], { type: 'application/json' }))
       // Date civile locale, pas UTC : un export fait à 00 h 30 doit porter la
       // date d'aujourd'hui, pas celle d'hier.
-      lien.download = `ingenious-${aujourdhui()}.json`
-      lien.click()
-      URL.revokeObjectURL(lien.href)
+      const nom = `ingenious-${aujourdhui()}.json`
+      const partage = await partagerFichier(nom, texte)
+      if (partage === 'annule') {
+        setMessage('Export annulé. Rien n’a été enregistré.')
+        return
+      }
+      if (partage === 'indisponible') telechargerFichier(nom, texte)
       marquerExport()
-      setMessage(`${journal.length} événements exportés.`)
+      setMessage(`${journal.length} événements exportés dans ${nom}.`)
+    } catch (erreur) {
+      setMessage(erreur instanceof Error ? erreur.message : String(erreur))
     } finally {
       setOccupe(false)
     }
@@ -236,6 +259,58 @@ export function Reglages({
       </div>
     </main>
   )
+}
+
+/**
+ * Propose le fichier à la feuille de partage du système.
+ *
+ * `canShare` est interrogé avec le fichier lui-même : plusieurs navigateurs
+ * exposent `navigator.share` sans accepter les fichiers, et ne pas le vérifier
+ * ferait échouer l'export là où le lien aurait suffi.
+ *
+ * Safari refuse le partage si le geste de l'utilisateur a été consommé par
+ * l'attente du journal ; ce refus n'est pas une erreur, c'est le cas normal sur
+ * un gros journal, et il faut retomber sur le téléchargement.
+ */
+async function partagerFichier(
+  nom: string,
+  texte: string,
+): Promise<'partage' | 'annule' | 'indisponible'> {
+  if (typeof navigator.canShare !== 'function' || typeof navigator.share !== 'function') {
+    return 'indisponible'
+  }
+  const fichier = new File([texte], nom, { type: 'application/json' })
+  if (!navigator.canShare({ files: [fichier] })) return 'indisponible'
+  try {
+    await navigator.share({ files: [fichier], title: nom })
+    return 'partage'
+  } catch (erreur) {
+    // `AbortError` : l'utilisateur a fermé la feuille. C'est un choix, pas une
+    // panne — surtout pas une raison de retomber sur un téléchargement qu'il
+    // n'a pas demandé, ni d'effacer le rappel de sauvegarde.
+    if (erreur instanceof DOMException && erreur.name === 'AbortError') return 'annule'
+    return 'indisponible'
+  }
+}
+
+/**
+ * Téléchargement par lien, pour les navigateurs de bureau.
+ *
+ * Le lien est attaché au document avant d'être cliqué, et l'URL n'est révoquée
+ * qu'au tour de boucle suivant : révoquer dans la foulée du clic annule le
+ * téléchargement sur plusieurs navigateurs, sans la moindre erreur visible.
+ */
+function telechargerFichier(nom: string, texte: string): void {
+  const url = URL.createObjectURL(new Blob([texte], { type: 'application/json' }))
+  const lien = document.createElement('a')
+  lien.href = url
+  lien.download = nom
+  lien.rel = 'noopener'
+  lien.style.display = 'none'
+  document.body.append(lien)
+  lien.click()
+  lien.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
 function ReserveResteAVivre({ reserve }: { reserve: Cents }) {

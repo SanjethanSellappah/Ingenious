@@ -251,7 +251,68 @@ trouver.
 
 ---
 
-## 5. Livré depuis
+## 5. Revue des entrées et des sorties
+
+### 5.1 Un import refusé ne disait pas pourquoi — _corrigé_
+
+`valider.ts` pose la règle : « un événement refusé doit être **nommé**, pas
+avalé ». La validation la tenait — chaque rejet porte le rang de l'événement et
+le champ fautif — mais l'écran d'import jetait ces phrases et n'affichait qu'un
+compte. « 412 refusés » ne laisse rien à faire ; « event[3].payload.date : date
+civile YYYY-MM-DD attendue, reçu "2026-02-30" » se corrige dans le fichier.
+
+Les cinq premières raisons sont désormais affichées — un fichier corrompu en
+produit parfois des milliers d'identiques, et les afficher toutes noierait la
+seule ligne utile.
+
+### 5.2 Le fichier d'import, éprouvé pour de bon
+
+Treize fichiers hostiles passés par l'écran réel, pas par un test unitaire :
+`__proto__` et `constructor.prototype` dans une charge utile, entier hors des
+entiers sûrs, `ts` négatif, identifiant non-UUID, type d'événement inventé,
+charge utile en tableau, texte de 100 000 caractères, JSON tronqué, en-tête
+étranger, version future, date du 30 février, identifiants en double.
+
+Résultat : aucune pollution de prototype (`Object.prototype` intact), chaque
+refus nommé, l'en-tête vérifié avant tout, les doublons fusionnés par union sur
+`id`, et l'application toujours vivante après les treize. Les charges utiles
+valides portant une clé hostile sont acceptées et la clé conservée telle quelle
+— c'est une donnée, jamais une instruction.
+
+### 5.3 L'export pouvait mentir sur iPhone — _corrigé_
+
+Tout le filet tient à ce bouton, et il était écrit pour un navigateur de bureau :
+`<a download>` sur une URL blob, avec révocation immédiate après le clic.
+
+Deux défauts, et le second est grave. Révoquer dans la foulée du clic annule le
+téléchargement sur plusieurs navigateurs, sans erreur visible. Surtout, Safari
+ignore `download` pour une URL blob et **ouvre le contenu dans un onglet** :
+l'utilisateur croit avoir sauvegardé, le rappel de sauvegarde disparaît, et il
+n'a aucun fichier. Une application dont la seule protection est l'export ne peut
+pas se tromper là-dessus, sur l'appareil même qu'elle vise.
+
+L'export passe maintenant par la feuille de partage du système quand le
+navigateur l'accepte pour un fichier — c'est elle qui donne « Enregistrer dans
+Fichiers » sur iOS — et retombe sur le lien sinon, lien attaché au document et
+URL révoquée au tour suivant. Un partage annulé n'efface pas le rappel : ce
+n'est pas une sauvegarde. Un refus du navigateur (geste consommé par l'attente
+du journal) retombe sur le téléchargement.
+
+Les quatre chemins sont vérifiés dans un vrai navigateur : téléchargement,
+partage accepté, partage annulé — rappel toujours présent sur les deux écrans
+qui le portent —, partage refusé avec repli.
+
+### 5.4 `Date` confiné, et la règle vérifiée
+
+Une date métier est une chaîne `YYYY-MM-DD` ; un `Date` promené dans le calcul
+se décale d'un jour selon le fuseau, sans lever d'exception. La règle existait
+en commentaire, et une seule ligne y contrevenait déjà. Elle est désormais
+tenue par un test qui parcourt les sources et nomme le fichier, la ligne et le
+code fautif — éprouvé en cassant la règle exprès.
+
+---
+
+## 6. Livré depuis
 
 - **Temporisation exponentielle** sur échec de code, plafonnée à cinq minutes.
   Au-delà, c'est l'utilisateur légitime qu'on punit.
@@ -263,7 +324,7 @@ trouver.
   qu'il ne protège pas, qu'il est irrécupérable — et une case à cocher qui exige
   de le reconnaître avant de continuer.
 
-## 6. Ce qui reste ouvert
+## 7. Ce qui reste ouvert
 
 - **Le dépôt privé de sauvegarde reste manuel.** La synchronisation automatique
   (phase 2) suppose un jeton d'accès saisi par appareil. Il n'entrera jamais dans
