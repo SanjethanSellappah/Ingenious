@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { aujourdhui } from '../core/clock'
-import { formaterMontant, soustraire, type Cents } from '../core/money'
+import { soustraire, type Cents } from '../core/money'
+import { useFormatMontant } from '../app/discretion'
 import { ecrire } from '../app/magasin'
 import { useEtat } from '../app/useEtat'
 import { soldeDuCompte } from '../domain/selecteurs'
@@ -22,6 +23,7 @@ import { identifiant } from '../domain/identifiant'
  * faisant apparaître dans les dépenses du mois.
  */
 export function Reconciliation() {
+  const formater = useFormatMontant()
   const { etat } = useEtat()
   const naviguer = useNavigate()
   const jour = aujourdhui()
@@ -101,9 +103,9 @@ export function Reconciliation() {
               <>Rien à corriger : le calcul et le relevé se rejoignent déjà.</>
             ) : (
               <>
-                Une transaction de {formaterMontant(ecart)} sera enregistrée sous « Non catégorisé
-                ». Elle représente ce qui a été dépensé sans être saisi — labelliser reste possible
-                plus tard, ce n’est pas une condition.
+                Une transaction de {formater(ecart)} sera enregistrée sous « Non catégorisé ». Elle
+                représente ce qui a été dépensé sans être saisi — labelliser reste possible plus
+                tard, ce n’est pas une condition.
               </>
             )}
           </p>

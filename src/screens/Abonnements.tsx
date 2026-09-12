@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ajouterJours, dateCivile, estDateCivile, type CivilDate } from '../core/civilDate'
 import { aujourdhui } from '../core/clock'
-import { formaterMontant, type Cents } from '../core/money'
+import { type Cents } from '../core/money'
+import { useFormatMontant } from '../app/discretion'
 import { montantValideA, dernierChangement } from '../core/prixAbonnement'
 import { prochainesOccurrences, type RegleRecurrence } from '../core/recurrence'
 import { ecrire } from '../app/magasin'
@@ -23,6 +24,7 @@ import { ChoixLabel } from '../ui/ChoixLabel'
  * calcule pas de tête au moment où on en aurait besoin.
  */
 export function Abonnements() {
+  const formater = useFormatMontant()
   const { etat } = useEtat()
   const jour = aujourdhui()
   const abonnements = useMemo(() => [...etat.abonnements.values()], [etat.abonnements])
@@ -37,7 +39,7 @@ export function Abonnements() {
       <div className="carte">
         <h2>Coût récurrent</h2>
         <Montant valeur={mensuel} principal neutre />
-        <p className="discret">par mois, soit {formaterMontant(annuel)} par an</p>
+        <p className="discret">par mois, soit {formater(annuel)} par an</p>
       </div>
 
       {abonnements.length === 0 && (
@@ -65,15 +67,13 @@ export function Abonnements() {
               {resume(abonnement)} ·{' '}
               {abonnement.montant_mode === 'estime'
                 ? 'montant estimé'
-                : formaterMontant(
-                    montantValideA(abonnement.prix, dateCivile(jour)) ?? (0 as Cents),
-                  )}
+                : formater(montantValideA(abonnement.prix, dateCivile(jour)) ?? (0 as Cents))}
             </p>
             {recent && changement !== null && (
               <p className="avertissement">
                 <strong>Tarif modifié</strong> le {changement.valide_du} :{' '}
-                {formaterMontant(changement.montant_cents)}. Les échéances antérieures gardent
-                l’ancien montant.
+                {formater(changement.montant_cents)}. Les échéances antérieures gardent l’ancien
+                montant.
               </p>
             )}
             <Link to={`/abonnements/${abonnement.id}`} className="lien-action">

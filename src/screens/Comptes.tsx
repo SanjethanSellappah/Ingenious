@@ -1,9 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, useSyncExternalStore } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import type { CivilDate } from '../core/civilDate'
 import { aujourdhui } from '../core/clock'
 import { cents } from '../core/money'
 import { useEtat } from '../app/useEtat'
+import { basculerDiscretion, montantsMasques, sabonnerDiscretion } from '../app/discretion'
 import type { Compte, Etat } from '../domain/etat'
 import { ancreDuCompte, mouvementsDuCompte, patrimoine, soldeDuCompte } from '../domain/selecteurs'
 import { Montant } from '../ui/Montant'
@@ -40,8 +41,9 @@ export function Comptes() {
 
   return (
     <main className="page">
-      <header>
+      <header className="entete-action">
         <h1>Patrimoine</h1>
+        <BoutonDiscretion />
       </header>
 
       <div className="carte">
@@ -110,7 +112,11 @@ function GroupeComptes({
               <strong>{compte.nom}</strong>
               <span className="discret"> · {LIBELLES_TYPE[compte.type] ?? compte.type}</span>
             </span>
-            <Montant valeur={soldeDuCompte(etat, compte.id, jour)} neutre />
+            <Montant
+              valeur={soldeDuCompte(etat, compte.id, jour)}
+              neutre
+              masque={compte.masque === true}
+            />
           </div>
         </Link>
       ))}
@@ -125,6 +131,30 @@ function GroupeComptes({
  * relevé le plus récent est signalé comme **ancre** : c'est lui qui sert de point
  * de départ au calcul, et le voir explique pourquoi le solde vaut ce qu'il vaut.
  */
+/**
+ * Masquer tous les montants, d'un geste.
+ *
+ * Posé sur l'écran du patrimoine parce que c'est celui qu'on ouvre devant
+ * quelqu'un — et qu'un mode discrétion qu'il faut aller chercher dans les
+ * réglages arrive toujours trop tard.
+ */
+function BoutonDiscretion() {
+  const masque = useSyncExternalStore(sabonnerDiscretion, montantsMasques, () => false)
+  return (
+    <button
+      type="button"
+      className="bouton-icone"
+      onClick={basculerDiscretion}
+      aria-pressed={masque}
+    >
+      <span aria-hidden="true">{masque ? '🙈' : '👁️'}</span>
+      <span className="hors-ecran">
+        {masque ? 'Afficher les montants' : 'Masquer les montants'}
+      </span>
+    </button>
+  )
+}
+
 export function DetailCompte() {
   const { etat } = useEtat()
   const { id } = useParams()
@@ -164,10 +194,16 @@ export function DetailCompte() {
 
       <div className="carte">
         <h2>Solde</h2>
-        <Montant valeur={soldeDuCompte(etat, compte.id, jour)} principal neutre />
+        <Montant
+          valeur={soldeDuCompte(etat, compte.id, jour)}
+          principal
+          neutre
+          masque={compte.masque === true}
+        />
         {ancre !== null ? (
           <p className="discret">
-            Dernier relevé le {ancre.date} à <Montant valeur={ancre.solde_cents} neutre />, plus les
+            Dernier relevé le {ancre.date} à{' '}
+            <Montant valeur={ancre.solde_cents} neutre masque={compte.masque === true} />, plus les
             mouvements postérieurs.
           </p>
         ) : (

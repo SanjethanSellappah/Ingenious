@@ -25,6 +25,15 @@ export type Compte = {
   groupe: GroupeCompte
   mode: ModeCompte
   archived_at?: CivilDate
+  /**
+   * Solde masqué à l'affichage.
+   *
+   * Décrit le compte, pas l'appareil : un livret qu'on ne veut pas voir en
+   * ouvrant l'application ne se remontre pas tout seul sur le téléphone d'à
+   * côté. Le compte reste compté dans le patrimoine — c'est le chiffre qu'on
+   * cache, pas l'argent qu'on oublie.
+   */
+  masque?: boolean
 }
 
 /** Relevé saisi par l'utilisateur. Sert d'ancre au calcul de solde. */
@@ -175,12 +184,14 @@ function appliquer(etat: Etat, evenement: Evenement): void {
         type: p.type as TypeCompte,
         groupe: p.groupe as GroupeCompte,
         mode: p.mode as ModeCompte,
+        ...(p.masque === true ? { masque: true } : {}),
       })
       break
     case 'account.updated': {
       const compte = etat.comptes.get(texte(p, 'id'))
       if (!compte) break
       if (typeof p.nom === 'string') compte.nom = p.nom
+      if (typeof p.masque === 'boolean') compte.masque = p.masque
       if (typeof p.type === 'string') compte.type = p.type as TypeCompte
       if (typeof p.groupe === 'string') compte.groupe = p.groupe as GroupeCompte
       if (typeof p.mode === 'string') compte.mode = p.mode as ModeCompte

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { aujourdhui } from '../core/clock'
-import { formaterMontant } from '../core/money'
+import { useFormatMontant } from '../app/discretion'
 import { rappelSauvegarde } from '../app/automatismes'
 import { useEtat } from '../app/useEtat'
 import { compteCourantEffectif } from '../domain/selecteurs'
@@ -22,6 +22,7 @@ import { Montant } from '../ui/Montant'
  * conteste pas.
  */
 export function Accueil() {
+  const formater = useFormatMontant()
   const { etat } = useEtat()
   const jour = aujourdhui()
   const compteId = compteCourantEffectif(etat)
@@ -70,13 +71,13 @@ export function Accueil() {
               {' · '}
               {composition(rav.composition.echeances, rav.composition.echeancesEstimees)}
               {etat.reglages.reserve_cents > 0 && (
-                <> · réserve de {formaterMontant(etat.reglages.reserve_cents)} mise de côté</>
+                <> · réserve de {formater(etat.reglages.reserve_cents)} mise de côté</>
               )}
             </p>
             {rav.composition.echeancesEstimees > 0 && (
               <p className="discret">
                 Les montants estimés sont pris au plus défavorable :{' '}
-                {formaterMontant(rav.montant_central_cents)} avec l’estimation centrale.
+                {formater(rav.montant_central_cents)} avec l’estimation centrale.
               </p>
             )}
           </>
@@ -141,7 +142,7 @@ export function Accueil() {
           <p className="avertissement">
             <strong>Attention :</strong> au pire des estimations, le solde passe sous zéro le{' '}
             {jourCourt(projection.pointBasPessimiste.date)} (
-            {formaterMontant(projection.pointBasPessimiste.solde_cents)}).
+            {formater(projection.pointBasPessimiste.solde_cents)}).
           </p>
         )}
         <p className="discret">

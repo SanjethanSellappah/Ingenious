@@ -86,6 +86,33 @@ h3 {
   margin-bottom: 1.5rem;
 }
 
+/* Un en-tête qui porte une action : le titre garde sa place, l'action se range
+   au bout sans la lui disputer. */
+.entete-action {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.bouton-icone {
+  flex: 0 0 auto;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1.25rem;
+  background: var(--fond-carte);
+  color: var(--encre);
+  border: 1px solid var(--trait);
+  border-radius: var(--rayon-petit);
+}
+
+.bouton-icone[aria-pressed='true'] {
+  border-color: var(--accent);
+}
+
 .page > header p {
   margin: 0.25rem 0 0;
   color: var(--encre-faible);
@@ -169,6 +196,41 @@ h3 {
   font-size: 2.5rem;
   font-weight: 700;
   letter-spacing: -0.03em;
+}
+
+/* Visible des seuls lecteurs d'écran : ce qu'on masque à l'œil doit rester dit
+   à qui n'a que la voix. */
+.hors-ecran {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.ligne-bascule {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  color: var(--encre);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.ligne-bascule input {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: 0 0 auto;
+  accent-color: var(--accent);
+}
+
+.montant-masque {
+  color: var(--encre-faible);
+  letter-spacing: 0.15em;
 }
 
 /* --- Formulaires ---------------------------------------------------------- */

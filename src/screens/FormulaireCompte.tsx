@@ -41,6 +41,7 @@ export function FormulaireCompte() {
   const [type, setType] = useState<TypeCompte>(existant?.type ?? 'livret')
   const [groupe, setGroupe] = useState<GroupeCompte>(existant?.groupe ?? 'bancaire')
   const [solde, setSolde] = useState<Cents | null>(null)
+  const [masque, setMasque] = useState(existant?.masque === true)
   const [occupe, setOccupe] = useState(false)
   const [confirmeArchivage, setConfirmeArchivage] = useState(false)
 
@@ -62,7 +63,7 @@ export function FormulaireCompte() {
       const entrees: Parameters<typeof ecrire>[0][number][] = [
         {
           type: existant ? 'account.updated' : 'account.created',
-          payload: { id: compteId, nom: nom.trim(), type, groupe, mode: 'saisi' },
+          payload: { id: compteId, nom: nom.trim(), type, groupe, mode: 'saisi', masque },
         },
       ]
       if (solde !== null) {
@@ -162,6 +163,22 @@ export function FormulaireCompte() {
         libelle={existant ? 'Relever le solde (facultatif)' : 'Solde actuel'}
         onChange={setSolde}
       />
+
+      <div className="champ">
+        <label className="ligne-bascule" htmlFor="masquer-compte">
+          <input
+            id="masquer-compte"
+            type="checkbox"
+            checked={masque}
+            onChange={(e) => setMasque(e.target.checked)}
+          />
+          <span>Masquer le solde de ce compte</span>
+        </label>
+        <p className="discret">
+          Le compte reste compté dans le patrimoine : c’est le chiffre qui est caché, pas l’argent
+          qui est oublié. Pour masquer tout d’un coup, l’œil en haut de l’écran Patrimoine.
+        </p>
+      </div>
 
       <div className="actions">
         <button type="button" className="secondaire" onClick={() => void naviguer('/comptes')}>

@@ -110,13 +110,15 @@ const VALIDATEURS: Record<
   TypeEvenement,
   (p: Record<string, unknown>, c: string) => Record<string, unknown>
 > = {
-  'account.created': (p, c) => ({
-    id: chaine(p.id, `${c}.id`),
-    nom: chaine(p.nom, `${c}.nom`, { max: 120 }),
-    type: parmi(p.type, `${c}.type`, TYPES_COMPTE),
-    groupe: parmi(p.groupe, `${c}.groupe`, GROUPES_COMPTE),
-    mode: parmi(p.mode, `${c}.mode`, MODES_COMPTE),
-  }),
+  'account.created': (p, c) =>
+    sansIndefinis({
+      id: chaine(p.id, `${c}.id`),
+      nom: chaine(p.nom, `${c}.nom`, { max: 120 }),
+      type: parmi(p.type, `${c}.type`, TYPES_COMPTE),
+      groupe: parmi(p.groupe, `${c}.groupe`, GROUPES_COMPTE),
+      mode: parmi(p.mode, `${c}.mode`, MODES_COMPTE),
+      masque: optionnel(p.masque, (v) => booleen(v, `${c}.masque`)),
+    }),
   'account.updated': (p, c) =>
     sansIndefinis({
       id: chaine(p.id, `${c}.id`),
@@ -124,6 +126,7 @@ const VALIDATEURS: Record<
       type: optionnel(p.type, (v) => parmi(v, `${c}.type`, TYPES_COMPTE)),
       groupe: optionnel(p.groupe, (v) => parmi(v, `${c}.groupe`, GROUPES_COMPTE)),
       mode: optionnel(p.mode, (v) => parmi(v, `${c}.mode`, MODES_COMPTE)),
+      masque: optionnel(p.masque, (v) => booleen(v, `${c}.masque`)),
     }),
   'account.archived': (p, c) => ({
     id: chaine(p.id, `${c}.id`),
@@ -163,7 +166,10 @@ const VALIDATEURS: Record<
     // Un virement d'un compte vers lui-même n'a pas de sens, et le pliage n'en
     // produirait qu'un seul mouvement : l'argent disparaîtrait sans trace.
     if (depuis === vers) {
-      throw new ErreurValidation(`${c}.to_account_id`, 'un virement ne peut pas viser son compte de départ')
+      throw new ErreurValidation(
+        `${c}.to_account_id`,
+        'un virement ne peut pas viser son compte de départ',
+      )
     }
     return sansIndefinis({
       id: chaine(p.id, `${c}.id`),

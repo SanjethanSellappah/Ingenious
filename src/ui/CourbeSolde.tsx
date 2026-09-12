@@ -1,5 +1,6 @@
 import { useId, useMemo, useState } from 'react'
-import { formaterMontant, type Cents } from '../core/money'
+import { type Cents } from '../core/money'
+import { useFormatMontant } from '../app/discretion'
 import type { PointDeSerie, Projection } from '../core/projection'
 
 /**
@@ -26,6 +27,7 @@ export function CourbeSolde({
   projection: Projection
   hauteur?: number
 }) {
+  const formater = useFormatMontant()
   const id = useId()
   const [rangSurvol, setRangSurvol] = useState<number | null>(null)
 
@@ -87,9 +89,8 @@ export function CourbeSolde({
           onPointerLeave={() => setRangSurvol(null)}
         >
           <title id={`${id}-titre`}>
-            Solde projeté entre {formaterMontant(min)} et {formaterMontant(max)} sur {serie.length}{' '}
-            jours. Point bas le {projection.pointBas.date} à{' '}
-            {formaterMontant(projection.pointBas.solde_cents)}.
+            Solde projeté entre {formater(min)} et {formater(max)} sur {serie.length} jours. Point
+            bas le {projection.pointBas.date} à {formater(projection.pointBas.solde_cents)}.
           </title>
 
           {/* Le zéro n'est tracé que s'il est dans le champ : une ligne hors sujet
@@ -131,10 +132,10 @@ export function CourbeSolde({
           )}
         </svg>
         <span className="courbe-axe courbe-axe-haut" aria-hidden="true">
-          {formaterMontant(max)}
+          {formater(max)}
         </span>
         <span className="courbe-axe courbe-axe-bas" aria-hidden="true">
-          {formaterMontant(min)}
+          {formater(min)}
         </span>
       </div>
 
@@ -151,19 +152,18 @@ export function CourbeSolde({
       <figcaption>
         {survol !== null ? (
           <>
-            <strong>{jourCourt(survol.date)}</strong> · {formaterMontant(survol.solde_cents)}
+            <strong>{jourCourt(survol.date)}</strong> · {formater(survol.solde_cents)}
             {survol.incertain && (
               <span className="discret">
                 {' '}
-                — entre {formaterMontant(survol.borne_basse_cents)} et{' '}
-                {formaterMontant(survol.borne_haute_cents)}
+                — entre {formater(survol.borne_basse_cents)} et {formater(survol.borne_haute_cents)}
               </span>
             )}
           </>
         ) : (
           <>
             Point bas le <strong>{jourCourt(projection.pointBas.date)}</strong> à{' '}
-            <strong>{formaterMontant(projection.pointBas.solde_cents)}</strong>
+            <strong>{formater(projection.pointBas.solde_cents)}</strong>
             {projection.premiereEstimation !== null && (
               <span className="discret">
                 {' '}

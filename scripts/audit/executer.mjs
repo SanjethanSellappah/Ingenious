@@ -39,6 +39,7 @@ const TOUS = [
   'extremes',
   'installation',
   'signales',
+  'discretion',
   'parcours',
   'code',
   'pin',

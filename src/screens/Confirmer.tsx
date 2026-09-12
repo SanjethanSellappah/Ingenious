@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { aujourdhui } from '../core/clock'
-import { formaterMontant, valeurAbsolue, type Cents } from '../core/money'
+import { valeurAbsolue, type Cents } from '../core/money'
+import { useFormatMontant } from '../app/discretion'
 import { ecrire } from '../app/magasin'
 import { useEtat } from '../app/useEtat'
 import { occurrencesAConfirmer } from '../domain/vues'
@@ -87,6 +88,7 @@ function LigneAConfirmer({
   subscriptionId: string
   dateTheorique: string
 }) {
+  const formater = useFormatMontant()
   // Sans montant attendu, il n'y a rien à valider : la saisie s'ouvre d'emblée.
   const [ouvert, setOuvert] = useState(!montantConnu)
   const [reel, setReel] = useState<Cents | null>(null)
@@ -147,7 +149,7 @@ function LigneAConfirmer({
           <SaisieMontant libelle="Montant réel" onChange={setReel} autoFocus />
           {ecart !== null && ecart !== 0 && (
             <p className="discret">
-              Écart avec l’estimation : {formaterMontant(Math.abs(ecart) as Cents)}{' '}
+              Écart avec l’estimation : {formater(Math.abs(ecart) as Cents)}{' '}
               {ecart > 0 ? 'de plus' : 'de moins'} que prévu. L’occurrence est corrigée, aucune
               seconde ligne n’est créée.
             </p>

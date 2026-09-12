@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { ajouterMois, dateCivile } from '../core/civilDate'
 import { aujourdhui } from '../core/clock'
-import { cents, formaterMontant } from '../core/money'
+import { cents } from '../core/money'
+import { useFormatMontant } from '../app/discretion'
 import { useEtat } from '../app/useEtat'
 import { depensesParLabel } from '../domain/selecteurs'
 import { Montant } from '../ui/Montant'
@@ -31,6 +32,7 @@ const NOMS_MOIS = [
  * — jamais par la couleur seule.
  */
 export function Labels() {
+  const formater = useFormatMontant()
   const { etat } = useEtat()
   const jour = aujourdhui()
   const [decalage, setDecalage] = useState(0)
@@ -106,12 +108,12 @@ export function Labels() {
                     {depasse ? (
                       <strong>
                         budget dépassé de{' '}
-                        {formaterMontant(cents(ligne.total_cents - ligne.budget_mensuel_cents))}
+                        {formater(cents(ligne.total_cents - ligne.budget_mensuel_cents))}
                       </strong>
                     ) : (
                       <>
                         {Math.round((ligne.partBudget ?? 0) * 100)} % du budget de{' '}
-                        {formaterMontant(ligne.budget_mensuel_cents)}
+                        {formater(ligne.budget_mensuel_cents)}
                       </>
                     )}
                   </>
