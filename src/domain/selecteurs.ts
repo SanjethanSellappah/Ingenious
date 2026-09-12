@@ -14,6 +14,7 @@
  *   jour disparaîtrait du calcul, en silence.
  */
 import { type CivilDate } from '../core/civilDate'
+import { dateAffichee } from '../core/recurrence'
 import { cents, negatif, type Cents } from '../core/money'
 import type { Etat, Exception, Label, Releve } from './etat'
 import { cleException, normaliserNom } from './etat'
@@ -69,6 +70,28 @@ export function mouvementsDuCompte(etat: Etat, account_id: string): Mouvement[] 
       ts: virement.ts,
       source_id: virement.id,
       ...(virement.note !== undefined ? { libelle: virement.note } : {}),
+    })
+  }
+
+  // Une occurrence confirmée **est** un mouvement : c'est ce que promet l'écran
+  // « à confirmer », et c'est ce qui fait que confirmer recale le solde. Elle
+  // apporte aussi le label de son abonnement, de sorte qu'un prélèvement
+  // récurrent compte dans son poste de dépense sans double saisie.
+  for (const exception of etat.exceptions.values()) {
+    if (exception.statut !== 'realise') continue
+    const abonnement = etat.abonnements.get(exception.subscription_id)
+    if (!abonnement || abonnement.account_id !== account_id) continue
+    const absolu = Math.abs(exception.montant_cents)
+    mouvements.push({
+      account_id,
+      // La date d'affichage, pas la théorique : c'est le jour où l'argent bouge.
+      date: dateAffichee(exception.date_theorique, abonnement.regle.regle_weekend),
+      montant_cents: cents(abonnement.sens === 'depense' ? -absolu : absolu),
+      nature: 'occurrence',
+      ts: exception.ts,
+      source_id: cleException(exception.subscription_id, exception.date_theorique),
+      libelle: abonnement.nom,
+      ...(abonnement.label_id !== undefined ? { label_id: abonnement.label_id } : {}),
     })
   }
 

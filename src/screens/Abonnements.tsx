@@ -166,6 +166,7 @@ export function FormulaireAbonnement() {
   const [regleMoisCourt, setRegleMoisCourt] = useState<
     NonNullable<RegleRecurrence['regle_mois_court']>
   >(existant?.regle.regle_mois_court ?? 'dernier_jour')
+  const [labelId, setLabelId] = useState(existant?.label_id ?? '')
   const [dateDebut, setDateDebut] = useState<CivilDate>(existant?.regle.date_debut ?? jour)
   const [occupe, setOccupe] = useState(false)
 
@@ -210,6 +211,7 @@ export function FormulaireAbonnement() {
             regle_mois_court: regleMoisCourt,
             date_debut: dateDebut,
             actif: true,
+            ...(labelId !== '' ? { label_id: labelId } : {}),
           },
         },
       ]
@@ -222,7 +224,13 @@ export function FormulaireAbonnement() {
           payload: {
             subscription_id: abonnementId,
             montant_cents: Math.abs(montant),
-            valide_du: jour,
+            // À la création, le tarif vaut depuis le début de l'abonnement — un
+            // loyer saisi aujourd'hui coûtait déjà cela le mois dernier. Sinon
+            // toutes les échéances antérieures resteraient sans montant, et
+            // l'application les réclamerait sans raison. Un changement ultérieur,
+            // lui, ne vaut qu'à partir d'aujourd'hui : c'est ce qui empêche une
+            // hausse de réécrire le passé.
+            valide_du: existant ? jour : dateDebut < jour ? dateDebut : jour,
           },
         })
       }
@@ -306,6 +314,26 @@ export function FormulaireAbonnement() {
           ))}
         </select>
       </div>
+
+      {sens === 'depense' && (
+        <div className="champ">
+          <label htmlFor="label-abo">Label</label>
+          <select id="label-abo" value={labelId} onChange={(e) => setLabelId(e.target.value)}>
+            <option value="">Non catégorisé</option>
+            {[...etat.labels.values()]
+              .filter((label) => label.archived_at === undefined)
+              .map((label) => (
+                <option key={label.id} value={label.id}>
+                  {label.nom}
+                </option>
+              ))}
+          </select>
+          <p className="discret">
+            Une fois l’échéance confirmée, son montant compte dans ce poste de dépense — sans avoir
+            à la saisir une seconde fois.
+          </p>
+        </div>
+      )}
 
       <div className="champ">
         <label htmlFor="frequence">Fréquence</label>

@@ -215,7 +215,30 @@ risque ajouté est nul ; l'impasse qu'il lève est réelle.
 de la clé est refaite, aucune donnée n'est re-chiffrée. C'était l'intérêt du
 chiffrement à enveloppe, resté jusqu'ici sans interface.
 
-### 4.11 Accessibilité, mesurée
+### 4.11 Confirmer une échéance ne servait à rien — _corrigé_
+
+Le plan d'action annonçait une « vue mouvement unifiée » incluant les
+occurrences réalisées ; le type existait, il n'était **jamais peuplé**. Une
+échéance confirmée ne comptait donc nulle part : ni dans le solde, ni dans les
+dépenses par label. Sept cents euros de loyer confirmés laissaient le compte à
+son montant d'avant, et le poste « Logement » à zéro.
+
+Deux conséquences, toutes deux dans le contexte : le §4.2 promettait qu'« un
+label inclut les prélèvements récurrents sans double saisie », et l'écran « à
+confirmer » n'avait aucun effet visible — un geste qu'on cesse de faire au bout
+de deux fois.
+
+Une occurrence confirmée est désormais un mouvement à part entière : datée au
+jour décalé, signée selon le sens de l'abonnement, portant son label. Le tarif
+initial d'un abonnement vaut de surcroît **depuis sa date de début** et non
+depuis aujourd'hui — sans quoi toutes ses échéances antérieures restaient sans
+montant et étaient réclamées sans raison.
+
+Le solde, lui, ne bouge que si l'échéance est postérieure au dernier relevé.
+C'est l'invariant §4.3 qui le veut, et l'écran le dit maintenant plutôt que de
+laisser croire l'inverse.
+
+### 4.12 Accessibilité, mesurée
 
 Audit automatisé sur les neuf écrans, application remplie : 255 textes contrôlés.
 Aucun contraste sous le seuil AA, aucun champ sans étiquette, aucun bouton sans

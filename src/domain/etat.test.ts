@@ -588,3 +588,141 @@ describe('fusion de deux appareils', () => {
     expect(plier([a, b])).toEqual(plier([b, a]))
   })
 })
+
+describe('occurrences confirmées', () => {
+  /**
+   * Ce que promet l'écran « à confirmer » : tant qu'une échéance n'est pas
+   * confirmée elle n'entre nulle part, et **une fois confirmée elle compte**.
+   * Sans cette seconde moitié, le geste ne servirait à rien.
+   */
+  function journalAvecLoyer(confirme: boolean): Evenement[] {
+    const journal = [
+      ev('account.created', { ...courant }),
+      ev('account.balance_set', { account_id: 'c1', date: '2026-09-01', solde_cents: 120000 }),
+      ev('label.created', { id: 'l-logement', nom: 'Logement', couleur: '#fff' }),
+      ev('subscription.created', {
+        id: 'loyer',
+        nom: 'Loyer',
+        account_id: 'c1',
+        label_id: 'l-logement',
+        sens: 'depense',
+        montant_mode: 'fixe',
+        frequence: 'mensuel',
+        jour_du_mois: 5,
+        date_debut: '2026-01-05',
+      }),
+      ev('subscription.price_changed', {
+        subscription_id: 'loyer',
+        montant_cents: 70000,
+        valide_du: '2026-01-05',
+      }),
+    ]
+    if (confirme) {
+      journal.push(
+        ev('occurrence.overridden', {
+          subscription_id: 'loyer',
+          date_theorique: '2026-09-05',
+          montant_cents: 70000,
+          statut: 'realise',
+        }),
+      )
+    }
+    return journal
+  }
+
+  it('ne comptent pas tant qu’elles ne sont pas confirmées', () => {
+    const etat = plier(journalAvecLoyer(false))
+    expect(soldeDuCompte(etat, 'c1', d('2026-09-30'))).toBe(e(1200))
+    expect(depensesParLabel(etat, '2026-09')).toEqual([])
+  })
+
+  it('recalent le solde une fois confirmées', () => {
+    const etat = plier(journalAvecLoyer(true))
+    expect(soldeDuCompte(etat, 'c1', d('2026-09-30'))).toBe(e(500))
+  })
+
+  it('comptent dans le poste de dépense de leur abonnement, sans double saisie', () => {
+    // C'est le §4.2 du contexte : « le total d'un label inclut les prélèvements
+    // récurrents sans double saisie ».
+    const lignes = depensesParLabel(plier(journalAvecLoyer(true)), '2026-09')
+    const logement = lignes.find((l) => l.label?.id === 'l-logement')!
+    expect(logement.total_cents).toBe(e(700))
+    expect(logement.nombre).toBe(1)
+  })
+
+  it('une rentrée confirmée n’entre pas dans les dépenses', () => {
+    const etat = plier([
+      ev('account.created', { ...courant }),
+      ev('subscription.created', {
+        id: 'salaire',
+        nom: 'Salaire',
+        account_id: 'c1',
+        sens: 'rentree',
+        montant_mode: 'fixe',
+        frequence: 'mensuel',
+        jour_du_mois: 28,
+        date_debut: '2026-01-28',
+      }),
+      ev('occurrence.overridden', {
+        subscription_id: 'salaire',
+        date_theorique: '2026-09-28',
+        montant_cents: 200000,
+        statut: 'realise',
+      }),
+    ])
+    expect(soldeDuCompte(etat, 'c1', d('2026-09-30'))).toBe(e(2000))
+    expect(depensesParLabel(etat, '2026-09')).toEqual([])
+  })
+
+  it('respectent le décalage jour ouvré de leur règle', () => {
+    // Théorique le 1er novembre 2026, un dimanche, avancé au vendredi 30 octobre :
+    // le mouvement appartient à octobre, pas à novembre.
+    const etat = plier([
+      ev('account.created', { ...courant }),
+      ev('subscription.created', {
+        id: 'loyer',
+        nom: 'Loyer',
+        account_id: 'c1',
+        sens: 'depense',
+        montant_mode: 'fixe',
+        frequence: 'mensuel',
+        jour_du_mois: 1,
+        regle_weekend: 'jour_ouvre_precedent',
+        date_debut: '2026-01-01',
+      }),
+      ev('occurrence.overridden', {
+        subscription_id: 'loyer',
+        date_theorique: '2026-11-01',
+        montant_cents: 70000,
+        statut: 'realise',
+      }),
+    ])
+    expect(mouvementsDuCompte(etat, 'c1')[0]!.date).toBe('2026-10-30')
+    expect(depensesParLabel(etat, '2026-10')[0]!.total_cents).toBe(e(700))
+    expect(depensesParLabel(etat, '2026-11')).toEqual([])
+  })
+
+  it('un prévisionnel ne compte pas — seul le réalisé bouge le solde', () => {
+    const etat = plier([
+      ev('account.created', { ...courant }),
+      ev('account.balance_set', { account_id: 'c1', date: '2026-09-01', solde_cents: 120000 }),
+      ev('subscription.created', {
+        id: 'loyer',
+        nom: 'Loyer',
+        account_id: 'c1',
+        sens: 'depense',
+        montant_mode: 'fixe',
+        frequence: 'mensuel',
+        jour_du_mois: 5,
+        date_debut: '2026-01-05',
+      }),
+      ev('occurrence.overridden', {
+        subscription_id: 'loyer',
+        date_theorique: '2026-09-05',
+        montant_cents: 70000,
+        statut: 'previsionnel',
+      }),
+    ])
+    expect(soldeDuCompte(etat, 'c1', d('2026-09-30'))).toBe(e(1200))
+  })
+})

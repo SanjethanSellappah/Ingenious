@@ -32,7 +32,12 @@ export function Confirmer() {
         <h1>À confirmer</h1>
         <p>
           Ces échéances sont passées sans que leur montant réel soit connu. Tant qu’elles ne le sont
-          pas, elles n’entrent ni dans le solde ni dans la courbe.
+          pas, elles ne comptent nulle part.
+        </p>
+        <p className="discret">
+          Les confirmer les fait entrer dans le total de leur poste de dépense et affine les
+          estimations suivantes. Le solde, lui, ne bouge que si l’échéance est postérieure à votre
+          dernier relevé — sinon ce relevé la contenait déjà.
         </p>
       </header>
 

@@ -88,6 +88,8 @@ export type Exception = {
   montant_cents: Cents
   statut: 'previsionnel' | 'realise'
   exclu_de_estimation?: boolean
+  /** Instant de l'écriture : départage une confirmation et une ancre du même jour. */
+  ts: number
 }
 
 export type Instantane = {
@@ -342,6 +344,7 @@ function appliquer(etat: Etat, evenement: Evenement): void {
         date_theorique: date(p, 'date_theorique'),
         montant_cents: nombre(p, 'montant_cents'),
         statut: p.statut as 'previsionnel' | 'realise',
+        ts: evenement.ts,
         ...(typeof p.exclu_de_estimation === 'boolean'
           ? { exclu_de_estimation: p.exclu_de_estimation }
           : {}),
