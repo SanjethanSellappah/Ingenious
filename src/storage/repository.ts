@@ -166,6 +166,52 @@ export async function ouvrirDepot(
 }
 
 /**
+ * Rechiffre tout le journal d'un chiffreur vers un autre.
+ *
+ * Indispensable au moment où l'utilisateur configure un code après avoir déjà
+ * saisi des données : sans cette opération, les enregistrements écrits en clair
+ * seraient rejetés à la relecture et **toutes les données existantes
+ * deviendraient illisibles** — une perte totale et silencieuse, provoquée par un
+ * geste censé protéger.
+ *
+ * L'écriture se fait par lots pour ne pas garder tout le journal déchiffré en
+ * mémoire deux fois, et chaque enregistrement est relu avant d'être réécrit :
+ * un enregistrement illisible est signalé, jamais remplacé par du vide.
+ */
+export async function rechiffrerJournal(
+  base: BaseIngenious,
+  ancien: Chiffreur,
+  nouveau: Chiffreur,
+  tailleLot = 200,
+): Promise<{ rechiffres: number; rejets: { index: number; raison: string }[] }> {
+  const enregistrements = await base.events.toArray()
+  const rejets: { index: number; raison: string }[] = []
+  let rechiffres = 0
+
+  for (let debut = 0; debut < enregistrements.length; debut += tailleLot) {
+    const lot = enregistrements.slice(debut, debut + tailleLot)
+    const aEcrire: { id: string; donnees: unknown }[] = []
+    for (const [rang, enregistrement] of lot.entries()) {
+      try {
+        const clair = await ancien.dechiffrer(enregistrement.donnees)
+        aEcrire.push({ id: enregistrement.id, donnees: await nouveau.chiffrer(clair) })
+      } catch (erreur) {
+        rejets.push({
+          index: debut + rang,
+          raison: `${enregistrement.id} : ${erreur instanceof Error ? erreur.message : String(erreur)}`,
+        })
+      }
+    }
+    if (aEcrire.length > 0) {
+      await base.events.bulkPut(aEcrire)
+      rechiffres += aEcrire.length
+    }
+  }
+
+  return { rechiffres, rejets }
+}
+
+/**
  * Lit une enveloppe d'export.
  *
  * L'en-tête est vérifié avant tout : importer un fichier qui n'est pas un

@@ -1,7 +1,7 @@
 # Modèle de menace et revue de sécurité
 
-Document tenu à jour à chaque revue. La dernière porte sur le lot 2 —
-chiffrement, dépôt, validation du journal.
+Document tenu à jour à chaque revue. Deux revues ont été passées : le lot 2
+(chiffrement, dépôt, validation) et les lots 5 à 7 (écrans et parcours complets).
 
 ---
 
@@ -89,11 +89,69 @@ se voie tout de suite et non en production seulement.
 
 ---
 
-## 4. Reste à faire
+## 4. Revue des lots 5 à 7 — une correction critique
 
-- **Temporisation exponentielle** sur échec de PIN, et re-verrouillage sur
-  `visibilitychange` — lot 4, quand l'écran de verrouillage existera.
-- **Pas d'effacement automatique** après N essais : avec un PIN perdu et aucune
-  récupération, ce serait un piège, pas une protection. Décision arrêtée.
-- **Avertissement explicite** à la configuration du PIN : ce qu'il protège, ce
-  qu'il ne protège pas, et qu'il est irrécupérable.
+### 4.1 Configurer un code rendait toutes les données illisibles — _corrigé_
+
+Le défaut le plus grave trouvé sur ce projet, et il était invisible aux tests
+unitaires : **activer un code après avoir saisi des données les rendait toutes
+illisibles**. Les enregistrements écrits en clair restaient en clair ; le
+chiffreur actif les rejetait ensuite un par un, et l'application s'ouvrait vide.
+Une perte totale, silencieuse, provoquée par un geste censé protéger.
+
+Le journal est désormais **rechiffré avant** que le coffre soit enregistré, et
+dans cet ordre précis : si le rechiffrement échoue, la base reste lisible sans
+code plutôt que de devenir un coffre dont on aurait perdu le contenu. Le
+rechiffrement se fait par lots, chaque enregistrement est relu avant d'être
+réécrit, et un enregistrement illisible interrompt l'opération au lieu d'être
+remplacé par du vide.
+
+Cinq tests verrouillent le comportement, dont un qui décrit le piège d'origine
+pour qu'il ne revienne pas.
+
+### 4.2 Balayage des nouvelles surfaces
+
+| Point | Constat |
+| --- | --- |
+| Construction dynamique de code | Aucune : ni `eval`, ni `new Function`, ni `innerHTML`, ni `dangerouslySetInnerHTML`. |
+| Appels réseau | Aucun. L'application ne parle à personne. |
+| Mémoire locale | Une seule clé, la date du dernier export. Ni code, ni clé, ni donnée financière. |
+| Le code dans le journal | Absent : le code ne transite par aucun événement ni aucun export. |
+| Import hostile | Validé champ par champ avant d'entrer, événements refusés nommés un par un. |
+| Dépendances | `npm audit` : aucune vulnérabilité. |
+
+### 4.3 Accessibilité, mesurée
+
+Audit automatisé sur les neuf écrans, application remplie : 255 textes contrôlés.
+Aucun contraste sous le seuil AA, aucun champ sans étiquette, aucun bouton sans
+nom accessible, un seul `h1` par écran, aucun saut de niveau de titre, focus
+clavier visible, aucune cible tactile sous 40 px.
+
+Le détecteur a lui-même été éprouvé sur une faute délibérée — un audit qui ne
+trouve jamais rien n'a aucune valeur tant qu'on n'a pas vérifié qu'il sait
+trouver.
+
+---
+
+## 5. Livré depuis
+
+- **Temporisation exponentielle** sur échec de code, plafonnée à cinq minutes.
+  Au-delà, c'est l'utilisateur légitime qu'on punit.
+- **Aucun effacement automatique** après N essais : avec un code perdu et aucune
+  récupération, ce serait un piège, pas une protection. Un test vérifie qu'après
+  vingt échecs le coffre est intact.
+- **Re-verrouillage** après deux minutes en arrière-plan.
+- **Avertissement explicite** à la configuration : ce que le code protège, ce
+  qu'il ne protège pas, qu'il est irrécupérable — et une case à cocher qui exige
+  de le reconnaître avant de continuer.
+
+## 6. Ce qui reste ouvert
+
+- **Le dépôt privé de sauvegarde reste manuel.** La synchronisation automatique
+  (phase 2) suppose un jeton d'accès saisi par appareil. Il n'entrera jamais dans
+  le dépôt de code ; le mécanisme de stockage reste à concevoir, et c'est la
+  seule nouvelle surface d'attaque prévue du projet.
+- **L'export est en clair, par choix.** C'est la seule chose qui survive à un
+  téléphone cassé, et elle doit rester lisible sans cette application. Un fichier
+  d'export mal rangé expose tout : le dire à l'utilisateur vaut mieux que de le
+  chiffrer et de perdre la clé avec le téléphone.

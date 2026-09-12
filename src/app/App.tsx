@@ -14,7 +14,7 @@ import { Reglages } from '../screens/Reglages'
 import { BarreOnglets } from '../ui/BarreOnglets'
 import { enregistrerInstantanes } from './automatismes'
 import { ConfigurationPin } from './ConfigurationPin'
-import { demarrer, enregistrerCoffre, ouvrirJournal, type Demarrage } from './demarrage'
+import { activerCoffre, demarrer, ouvrirJournal, type Demarrage } from './demarrage'
 import { useEtat } from './useEtat'
 import { Verrouillage } from './Verrouillage'
 import { DELAI_REVERROUILLAGE_MS, verrouiller, type Verrou } from './verrou'
@@ -50,15 +50,15 @@ export function App() {
 
   const surPinConfigure = useCallback(
     async (nouveau: Verrou) => {
-      if (!demarrage || nouveau.meta === null) return
-      await enregistrerCoffre(demarrage.base, nouveau.meta)
-      // Le journal est relu avec le chiffreur actif : ce qui avait été écrit en
-      // clair avant la configuration est réécrit chiffré au prochain ajout.
+      if (!demarrage || verrou === null || nouveau.meta === null) return
+      // Le journal déjà écrit en clair est rechiffré avant toute chose : sans
+      // cela, activer un code rendrait illisible tout ce qui existait.
+      await activerCoffre(demarrage.base, verrou, nouveau)
       await ouvrirJournal(demarrage.base, nouveau)
       setVerrou(nouveau)
       setConfiguration(false)
     },
-    [demarrage],
+    [demarrage, verrou],
   )
 
   if (echec !== null) {

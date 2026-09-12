@@ -250,7 +250,7 @@ exporte, on vide la base, on réimporte, l'état dérivé est identique au bit p
   estimée avec un montant de départ ; trois abonnements. Plus l'invitation à
   installer sur l'écran d'accueil, qui est la vraie protection contre la purge.
 
-### Lot 5 — Écrans, par ordre d'utilité quotidienne
+### Lot 5 — Écrans, par ordre d'utilité quotidienne ✅
 
 1. **Accueil** — reste à vivre en gros ; solde projeté du courant ; alerte de
    point bas ; prochaines échéances ; **occurrences à confirmer** (§2.4) ; et de
@@ -267,7 +267,7 @@ exporte, on vide la base, on réimporte, l'état dérivé est identique au bit p
 8. **Détail de compte** — relevés d'un compte `saisi`.
 9. **Réglages** — PIN, réserve, export, import, labels, état du stockage.
 
-### Lot 6 — Filet et automatismes
+### Lot 6 — Filet et automatismes ✅
 
 - Instantané quotidien par compte déclenché à l'ouverture ; les trous se relient,
   ne se comblent jamais par des valeurs inventées.
@@ -275,7 +275,7 @@ exporte, on vide la base, on réimporte, l'état dérivé est identique au bit p
 - Régularisation de fin de mois : le réel remplace le montant de l'occurrence,
   l'écart avec l'estimation est affiché sans être écrit.
 
-### Lot 7 — Finitions
+### Lot 7 — Finitions ✅
 
 Accessibilité (aucune information portée par la seule couleur, taille des cibles,
 contrastes), comportement hors ligne, coût du pliage au démarrage, `README`.
@@ -453,14 +453,19 @@ fiscal, vue à douze mois. Le PEA et l'or existent dès la phase 1 **en mode
 
 ## 10. Où en est le chantier
 
-Lots 0 à 4 livrés, 294 tests. L'application démarre, se verrouille, se remplit
-par l'onboarding, et **s'exporte** — la règle §1.3 est donc levée : le filet
-existe, les vraies données peuvent entrer.
+**Phase 1 livrée**, lots 0 à 7. L'application démarre, se verrouille, se remplit,
+projette, réconcilie et s'exporte.
 
-Les arbitrages §2.1 à §2.8 sont tous implémentés et couverts par des tests.
-Une revue de sécurité a été passée sur le lot 2, avec trois corrections
-(`docs/SECURITE.md`).
+- `src/conformite.test.ts` est une relecture exécutable de `CONTEXTE.md` : chaque
+  test porte le numéro de l'article qu'il vérifie. Une prose qui affirme « les
+  virements sortent des dépenses » vieillit mal ; un test qui échoue prévient.
+- Deux revues de sécurité sont passées (`docs/SECURITE.md`), la seconde ayant
+  trouvé le défaut le plus grave du projet : activer un code après coup rendait
+  toutes les données illisibles.
+- Accessibilité mesurée sur les neuf écrans, pas supposée.
+- Le pliage de cinq mille événements prend neuf millisecondes : la marge est
+  large, et un test la garde.
 
-La suite est le **lot 5** : les écrans, par ordre d'utilité quotidienne — accueil
-avec le reste à vivre, ajout rapide, réconciliation hebdomadaire, puis le reste.
-C'est là que le noyau déjà écrit devient visible.
+La suite est la **phase 2** (§9 du contexte), hors périmètre : mode `calculé` et
+cours de bourse, synchronisation automatique par le dépôt privé, import CSV,
+suivi fiscal, vue à douze mois.

@@ -8,7 +8,7 @@
 import { ouvrirBase, CLE_COFFRE, type BaseIngenious } from '../storage/db'
 import { demanderPersistance, type EtatPersistance } from '../storage/persistance'
 import type { MetaCoffre } from '../storage/crypto'
-import { ouvrirDepot } from '../storage/repository'
+import { ouvrirDepot, rechiffrerJournal } from '../storage/repository'
 import { brancherDepot } from './magasin'
 import { verrouFerme, verrouSansPin, type Verrou } from './verrou'
 
@@ -40,7 +40,25 @@ export async function ouvrirJournal(base: BaseIngenious, verrou: Verrou): Promis
   await brancherDepot(await ouvrirDepot({ base, chiffreur: verrou.chiffreur }))
 }
 
-/** Enregistre le coffre après configuration d'un PIN. */
-export async function enregistrerCoffre(base: BaseIngenious, meta: MetaCoffre): Promise<void> {
-  await base.meta.put({ cle: CLE_COFFRE, valeur: meta })
+/**
+ * Active un coffre neuf sur une base existante.
+ *
+ * Le journal est **rechiffré avant** que le coffre soit enregistré. Dans cet
+ * ordre : si le rechiffrement échoue, la base reste lisible sans code, au lieu
+ * de devenir un coffre dont on aurait perdu le contenu.
+ */
+export async function activerCoffre(
+  base: BaseIngenious,
+  ancien: Verrou,
+  nouveau: Verrou,
+): Promise<{ rechiffres: number; rejets: { index: number; raison: string }[] }> {
+  if (nouveau.meta === null) throw new Error('Aucun coffre à activer')
+  const resultat = await rechiffrerJournal(base, ancien.chiffreur, nouveau.chiffreur)
+  if (resultat.rejets.length > 0) {
+    throw new Error(
+      `${resultat.rejets.length} enregistrement(s) illisible(s) : le code n'a pas été activé pour ne rien perdre. ${resultat.rejets[0]!.raison}`,
+    )
+  }
+  await base.meta.put({ cle: CLE_COFFRE, valeur: nouveau.meta })
+  return resultat
 }
