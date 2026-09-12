@@ -9,7 +9,7 @@
  */
 import { ajouterJours, type CivilDate } from '../core/civilDate'
 import { echeancesDesRecurrences, type Recurrence, type ResultatEcheances } from '../core/echeances'
-import { negatif, type Cents } from '../core/money'
+import { cents, negatif, type Cents } from '../core/money'
 import { projeterSolde, type EcheanceProjetee, type Projection } from '../core/projection'
 import { resteAVivre, type ResteAVivre } from '../core/resteAVivre'
 import type { Etat } from './etat'
@@ -109,13 +109,23 @@ function comparerEcheances(a: EcheanceProjetee, b: EcheanceProjetee): number {
   return (a.libelle ?? '').localeCompare(b.libelle ?? '', 'fr')
 }
 
-/** Projection d'un compte sur `jours` jours à partir de `depuis`. */
+/**
+ * Projection d'un compte sur `jours` jours à partir de `depuis`.
+ *
+ * `composition.echeancesEchues` du noyau est toujours vide ici, et c'est normal :
+ * la fenêtre commence au jour même, donc aucune échéance ne peut lui être
+ * antérieure. Les occurrences réellement en retard se lisent dans `aConfirmer`,
+ * qui regarde en arrière — deux notions voisines, une seule utile à ce niveau.
+ */
 export function projectionDuCompte(
   etat: Etat,
   account_id: string,
   depuis: CivilDate,
   jours: number = HORIZON_JOURS,
-): Projection & { nonResolues: ResultatEcheances['nonResolues'] } {
+): Projection & {
+  nonResolues: ResultatEcheances['nonResolues']
+  aConfirmer: AConfirmer[]
+} {
   const fin = ajouterJours(depuis, jours)
   const { echeances, nonResolues } = echeancesDuCompte(etat, account_id, depuis, fin)
   return {
@@ -126,6 +136,7 @@ export function projectionDuCompte(
       fin,
     }),
     nonResolues,
+    aConfirmer: occurrencesAConfirmerDuCompte(etat, account_id, depuis),
   }
 }
 
@@ -169,26 +180,77 @@ export function prochainesEcheances(
   return toutes.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)).slice(0, combien)
 }
 
+/** Jusqu'où regarder en arrière pour réclamer une occurrence non confirmée. */
+export const RETARD_MAX_JOURS = 45
+
 /**
- * Occurrences dont le jour est passé sans confirmation, tous comptes confondus.
+ * Une occurrence en attente de confirmation.
+ *
+ * `montantConnu` distingue deux situations très différentes : une échéance dont
+ * on connaît le montant attendu et qu'il suffit de valider, et une échéance dont
+ * on ne sait rien du tout — récurrence estimée sans historique ni montant de
+ * départ. La seconde est la plus urgente, et c'est celle qu'on oublie le plus
+ * facilement de rendre saisissable.
+ */
+export type AConfirmer = EcheanceProjetee & { montantConnu: boolean }
+
+/**
+ * Occurrences d'un compte dont le jour est passé sans confirmation.
  *
  * L'application ne sait pas si elles sont passées en banque. Elle ne les compte
  * nulle part et les réclame ici : c'est ce geste qui recale le solde.
+ *
+ * Seules les occurrences de récurrences sont concernées — une transaction déjà
+ * saisie n'a rien à confirmer, elle est déjà dans le solde.
  */
-export function occurrencesAConfirmer(etat: Etat, depuis: CivilDate): EcheanceProjetee[] {
-  const debut = ajouterJours(depuis, -45)
-  const aConfirmer: EcheanceProjetee[] = []
+export function occurrencesAConfirmerDuCompte(
+  etat: Etat,
+  account_id: string,
+  depuis: CivilDate,
+): AConfirmer[] {
+  const debut = ajouterJours(depuis, -RETARD_MAX_JOURS)
+  const { echeances, nonResolues } = echeancesDuCompte(etat, account_id, debut, depuis)
+
+  const dejaConfirmee = (subscription_id: string, date_theorique: CivilDate): boolean =>
+    etat.exceptions.get(`${subscription_id}@${date_theorique}`)?.statut === 'realise'
+
+  const attente: AConfirmer[] = echeances
+    .filter(
+      (echeance) =>
+        echeance.reference !== undefined &&
+        !dejaConfirmee(echeance.reference.subscription_id, echeance.reference.date_theorique),
+    )
+    .map((echeance) => ({ ...echeance, montantConnu: true }))
+
+  // Les occurrences qu'on n'a pas su valoriser sont les plus urgentes : sans
+  // elles ici, l'application signalerait « 2 échéances sans montant connu »
+  // sans offrir nulle part de les renseigner.
+  for (const nonResolue of nonResolues) {
+    const { recurrence_id, occurrence, libelle } = nonResolue
+    if (dejaConfirmee(recurrence_id, occurrence.date_theorique)) continue
+    attente.push({
+      date: occurrence.date_affichee,
+      // Zéro n'est pas un montant, c'est une absence : `montantConnu` le dit,
+      // et l'écran demande la valeur au lieu de proposer de valider un zéro.
+      montant_cents: cents(0),
+      borne_basse_cents: cents(0),
+      borne_haute_cents: cents(0),
+      estime: true,
+      montantConnu: false,
+      libelle,
+      reference: { subscription_id: recurrence_id, date_theorique: occurrence.date_theorique },
+    })
+  }
+
+  return attente.sort(comparerEcheances)
+}
+
+/** Même chose, tous comptes confondus. */
+export function occurrencesAConfirmer(etat: Etat, depuis: CivilDate): AConfirmer[] {
+  const aConfirmer: AConfirmer[] = []
   for (const compte of etat.comptes.values()) {
     if (compte.archived_at !== undefined) continue
-    const { echeances } = echeancesDuCompte(etat, compte.id, debut, depuis)
-    for (const echeance of echeances) {
-      if (echeance.reference === undefined) continue
-      const exception = etat.exceptions.get(
-        `${echeance.reference.subscription_id}@${echeance.reference.date_theorique}`,
-      )
-      if (exception?.statut === 'realise') continue
-      aConfirmer.push(echeance)
-    }
+    aConfirmer.push(...occurrencesAConfirmerDuCompte(etat, compte.id, depuis))
   }
   return aConfirmer.sort(comparerEcheances)
 }

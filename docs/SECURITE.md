@@ -159,7 +159,32 @@ formulaire de budget s'étalait en ligne et poussait ses boutons hors de l'écra
 du téléphone. Un contrôle automatisé du débordement horizontal couvre désormais
 les dix écrans.
 
-### 4.7 Accessibilité, mesurée
+### 4.7 Une impasse : signaler un problème qu'aucun écran ne résout — _corrigé_
+
+L'accueil affichait « 2 échéances sans montant connu » et **aucun écran ne
+permettait de les renseigner**. La liste des occurrences à confirmer ne
+contenait que celles dont le montant était déjà connu : les plus urgentes en
+étaient précisément absentes.
+
+Elles y figurent désormais, avec la mention « montant inconnu, à renseigner » et
+la saisie ouverte d'emblée — il n'y a rien à valider quand il n'y a rien
+d'attendu. Le montant saisi alimente ensuite la fenêtre glissante et valorise
+les mois suivants.
+
+Trouvé en créant une récurrence variable sans montant de départ, puis en
+cherchant comment la renseigner.
+
+### 4.8 Deux notions concurrentes pour la même chose — _simplifié_
+
+Le noyau exposait `composition.echeancesEchues` et le domaine
+`occurrencesAConfirmer`. Au niveau du domaine, la première était **toujours
+vide** — la fenêtre de projection commence au jour même, aucune échéance ne peut
+lui être antérieure. Une valeur toujours vide finit par être lue comme « il n'y
+a rien », ce qui est faux. La projection rend maintenant `aConfirmer`, calculée
+sur une fenêtre de quarante-cinq jours en arrière, et le champ du noyau garde
+son rôle de garde-fou à son niveau.
+
+### 4.9 Accessibilité, mesurée
 
 Audit automatisé sur les neuf écrans, application remplie : 255 textes contrôlés.
 Aucun contraste sous le seuil AA, aucun champ sans étiquette, aucun bouton sans

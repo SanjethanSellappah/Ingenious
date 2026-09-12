@@ -98,7 +98,11 @@ export function Accueil() {
                 <span>
                   {jourCourt(echeance.date)} · {echeance.libelle}
                 </span>
-                <Montant valeur={echeance.montant_cents} />
+                {echeance.montantConnu ? (
+                  <Montant valeur={echeance.montant_cents} />
+                ) : (
+                  <span className="discret">montant à renseigner</span>
+                )}
               </li>
             ))}
           </ul>

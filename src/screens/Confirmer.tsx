@@ -49,6 +49,7 @@ export function Confirmer() {
             date={echeance.date}
             attendu={echeance.montant_cents}
             estime={echeance.estime}
+            montantConnu={echeance.montantConnu}
             subscriptionId={echeance.reference!.subscription_id}
             dateTheorique={echeance.reference!.date_theorique}
           />
@@ -69,6 +70,7 @@ function LigneAConfirmer({
   date,
   attendu,
   estime,
+  montantConnu,
   subscriptionId,
   dateTheorique,
 }: {
@@ -76,10 +78,12 @@ function LigneAConfirmer({
   date: string
   attendu: Cents
   estime: boolean
+  montantConnu: boolean
   subscriptionId: string
   dateTheorique: string
 }) {
-  const [ouvert, setOuvert] = useState(false)
+  // Sans montant attendu, il n'y a rien à valider : la saisie s'ouvre d'emblée.
+  const [ouvert, setOuvert] = useState(!montantConnu)
   const [reel, setReel] = useState<Cents | null>(null)
   const [exclu, setExclu] = useState(false)
   const [occupe, setOccupe] = useState(false)
@@ -112,8 +116,16 @@ function LigneAConfirmer({
     <div className="carte">
       <h2>{libelle}</h2>
       <p className="discret">
-        Prévue le {date} · <Montant valeur={attendu} />
-        {estime && ' · estimée'}
+        Prévue le {date}
+        {montantConnu ? (
+          <>
+            {' · '}
+            <Montant valeur={attendu} />
+            {estime && ' · estimée'}
+          </>
+        ) : (
+          <> · montant inconnu, à renseigner</>
+        )}
       </p>
 
       {!ouvert ? (
@@ -140,9 +152,11 @@ function LigneAConfirmer({
             Écarter de l’estimation (prime, régularisation, rappel)
           </label>
           <div className="actions">
-            <button type="button" className="secondaire" onClick={() => setOuvert(false)}>
-              Annuler
-            </button>
+            {montantConnu && (
+              <button type="button" className="secondaire" onClick={() => setOuvert(false)}>
+                Annuler
+              </button>
+            )}
             <button
               type="button"
               onClick={() => reel !== null && void confirmer(reel)}
