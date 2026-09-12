@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { aujourdhui } from '../core/clock'
 import { formaterMontant } from '../core/money'
+import { rappelSauvegarde } from '../app/automatismes'
 import { useEtat } from '../app/useEtat'
 import {
   occurrencesAConfirmer,
@@ -45,6 +46,9 @@ export function Accueil() {
   const echeances = prochainesEcheances(etat, jour, 5)
   const aConfirmer = occurrencesAConfirmer(etat, jour)
   const alerte = projection.pointBasPessimiste.solde_cents < 0
+  // Le rappel vit ici et pas seulement dans Réglages : un rappel rangé dans
+  // l'écran qu'on n'ouvre jamais n'est pas un rappel.
+  const rappel = rappelSauvegarde(jour)
 
   return (
     <main className="page">
@@ -79,6 +83,23 @@ export function Accueil() {
           <p className="discret">Pas encore calculable.</p>
         )}
       </div>
+
+      {rappel.du && (
+        <div className="carte a-confirmer">
+          <h2>
+            <span aria-hidden="true">💾</span> Sauvegarde
+          </h2>
+          <p className="discret">
+            {rappel.dernier === null
+              ? 'Aucun export depuis cet appareil.'
+              : `Dernier export il y a ${rappel.jours} jours.`}{' '}
+            Sans serveur, un téléphone cassé sans export, c’est tout perdu.
+          </p>
+          <Link to="/reglages" className="lien-action">
+            Exporter maintenant
+          </Link>
+        </div>
+      )}
 
       {aConfirmer.length > 0 && (
         <div className="carte a-confirmer">

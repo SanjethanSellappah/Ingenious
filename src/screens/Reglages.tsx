@@ -296,6 +296,7 @@ function GestionLabels() {
   const { etat } = useEtat()
   const [enEdition, setEnEdition] = useState<string | null>(null)
   const [budget, setBudget] = useState<Cents | null>(null)
+  const [nom, setNom] = useState('')
   const [occupe, setOccupe] = useState(false)
   const labels = [...etat.labels.values()].filter((label) => label.archived_at === undefined)
 
@@ -310,6 +311,19 @@ function GestionLabels() {
       ])
       setEnEdition(null)
       setBudget(null)
+    } finally {
+      setOccupe(false)
+    }
+  }
+
+  async function renommer(id: string, nouveau: string) {
+    const propre = nouveau.trim()
+    if (propre === '') return
+    setOccupe(true)
+    try {
+      // Le nom normalisé se recalcule au pliage : renommer « courses » en
+      // « Courses » ne crée pas un second label.
+      await ecrire([{ type: 'label.renamed', payload: { id, nom: propre } }])
     } finally {
       setOccupe(false)
     }
@@ -351,9 +365,10 @@ function GestionLabels() {
                     onClick={() => {
                       setEnEdition(enEdition === label.id ? null : label.id)
                       setBudget(null)
+                      setNom(label.nom)
                     }}
                   >
-                    Budget
+                    Modifier
                   </button>
                   <button
                     type="button"
@@ -367,6 +382,20 @@ function GestionLabels() {
               </div>
               {enEdition === label.id && (
                 <>
+                  <div className="champ">
+                    <label htmlFor={`nom-label-${label.id}`}>Nom</label>
+                    <input
+                      id={`nom-label-${label.id}`}
+                      value={nom}
+                      autoComplete="off"
+                      onChange={(e) => setNom(e.target.value)}
+                      onBlur={() => {
+                        if (nom.trim() !== '' && nom.trim() !== label.nom) {
+                          void renommer(label.id, nom)
+                        }
+                      }}
+                    />
+                  </div>
                   <SaisieMontant
                     libelle={`Budget mensuel pour « ${label.nom} »`}
                     onChange={setBudget}
