@@ -4,7 +4,7 @@ import { dateCivile, estDateCivile, type CivilDate } from '../core/civilDate'
 import { negatif, type Cents } from '../core/money'
 import { ecrire } from '../app/magasin'
 import { useEtat } from '../app/useEtat'
-import type { Transaction, Virement } from '../domain/etat'
+import type { Exception, Transaction, Virement } from '../domain/etat'
 import { Montant } from '../ui/Montant'
 import { SaisieMontant } from '../ui/SaisieMontant'
 
@@ -26,6 +26,13 @@ export function Mouvement() {
 
   const transaction = id !== undefined ? etat.transactions.get(id) : undefined
   const virement = id !== undefined ? etat.virements.get(id) : undefined
+  // Une occurrence confirmée porte comme identifiant le couple (abonnement,
+  // date théorique) : c'est sa clé, et elle n'existe nulle part ailleurs.
+  const exception = id !== undefined ? etat.exceptions.get(id) : undefined
+
+  if (exception !== undefined) {
+    return <CorrigerOccurrence exception={exception} />
+  }
 
   if (!transaction && !virement) {
     return (
@@ -288,6 +295,119 @@ function CorrigerVirement({ virement }: { virement: Virement }) {
         >
           Supprimer ce virement
         </button>
+      </div>
+    </main>
+  )
+}
+
+/**
+ * Correction d'une occurrence confirmée.
+ *
+ * Une confirmation saisie de travers devait pouvoir se reprendre : l'écran « à
+ * confirmer » ne montre que ce qui reste à faire, donc une fois validée, une
+ * occurrence n'y réapparaît jamais.
+ *
+ * Corriger réécrit l'exception — un seul montant, jamais une seconde ligne.
+ * Annuler la confirmation efface l'exception : l'occurrence redevient une
+ * prévision, et l'application la réclame de nouveau.
+ */
+function CorrigerOccurrence({ exception }: { exception: Exception }) {
+  const { etat } = useEtat()
+  const naviguer = useNavigate()
+  const abonnement = etat.abonnements.get(exception.subscription_id)
+  const [montant, setMontant] = useState<Cents | null>(exception.montant_cents)
+  const [exclu, setExclu] = useState(exception.exclu_de_estimation === true)
+  const [occupe, setOccupe] = useState(false)
+
+  async function enregistrer() {
+    if (montant === null) return
+    setOccupe(true)
+    try {
+      await ecrire([
+        {
+          type: 'occurrence.overridden',
+          payload: {
+            subscription_id: exception.subscription_id,
+            date_theorique: exception.date_theorique,
+            montant_cents: Math.abs(montant),
+            statut: 'realise',
+            ...(exclu ? { exclu_de_estimation: true } : {}),
+          },
+        },
+      ])
+      void naviguer(-1)
+    } finally {
+      setOccupe(false)
+    }
+  }
+
+  async function annuler() {
+    setOccupe(true)
+    try {
+      await ecrire([
+        {
+          type: 'occurrence.override_cleared',
+          payload: {
+            subscription_id: exception.subscription_id,
+            date_theorique: exception.date_theorique,
+          },
+        },
+      ])
+      void naviguer(-1)
+    } finally {
+      setOccupe(false)
+    }
+  }
+
+  return (
+    <main className="page">
+      <header>
+        <h1>Corriger une échéance</h1>
+        <p>
+          {abonnement?.nom ?? 'Abonnement'} · échéance du {exception.date_theorique}
+        </p>
+      </header>
+
+      <SaisieMontant
+        libelle="Montant réel"
+        valeurInitiale={absolu(exception.montant_cents)}
+        onChange={setMontant}
+      />
+
+      <label className="case">
+        <input type="checkbox" checked={exclu} onChange={(e) => setExclu(e.target.checked)} />
+        Écarter de l’estimation (prime, régularisation, rappel)
+      </label>
+
+      <div className="actions">
+        <button type="button" className="secondaire" onClick={() => void naviguer(-1)}>
+          Annuler
+        </button>
+        <button
+          type="button"
+          onClick={() => void enregistrer()}
+          disabled={montant === null || occupe}
+        >
+          Enregistrer
+        </button>
+      </div>
+
+      <div className="carte">
+        <h2>Annuler la confirmation</h2>
+        <p className="discret">
+          L’échéance redeviendra une prévision, et l’application la réclamera de nouveau. Utile si
+          vous aviez confirmé un prélèvement qui n’est finalement pas passé.
+        </p>
+        <div className="actions">
+          <button
+            type="button"
+            className="secondaire"
+            onClick={() => void annuler()}
+            disabled={occupe}
+          >
+            Annuler la confirmation
+          </button>
+        </div>
       </div>
     </main>
   )
