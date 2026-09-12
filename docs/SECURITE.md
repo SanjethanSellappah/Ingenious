@@ -302,7 +302,23 @@ Les quatre chemins sont vérifiés dans un vrai navigateur : téléchargement,
 partage accepté, partage annulé — rappel toujours présent sur les deux écrans
 qui le portent —, partage refusé avec repli.
 
-### 5.4 `Date` confiné, et la règle vérifiée
+### 5.4 L'écran de verrouillage n'avait aucun repère de page — _corrigé_
+
+L'audit d'accessibilité ne portait que sur les onze écrans accessibles par une
+route. Il en manquait sept : les trois écrans de détail, les deux écrans
+« introuvable », et surtout les cinq écrans de verrou — ceux qu'on n'atteint
+pas par une URL, et que rencontre en premier quiconque a configuré un code.
+
+Étendu à seize écrans plus les cinq du verrou, il a trouvé : l'écran de saisie
+du code était un `<form>` nu, sans `<main>`. Tous les autres écrans en ont un.
+Un lecteur d'écran y arrivait sans repère de page et sans nulle part où sauter,
+sur la première chose que l'application montre. Le formulaire est désormais
+enveloppé dans un `<main>`, la mise en page inchangée et mesurée.
+
+Le reste est propre sur les vingt et un écrans : aucun contraste sous le seuil
+AA, aucun champ sans étiquette, un seul `h1`, aucun saut de niveau de titre.
+
+### 5.5 `Date` confiné, et la règle vérifiée
 
 Une date métier est une chaîne `YYYY-MM-DD` ; un `Date` promené dans le calcul
 se décale d'un jour selon le fuseau, sans lever d'exception. La règle existait

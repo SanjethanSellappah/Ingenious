@@ -250,10 +250,16 @@ button.secondaire {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  padding: var(--gouttiere);
+}
+
+.verrou form {
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
+  width: 100%;
   max-width: 20rem;
   margin: 0 auto;
-  padding: var(--gouttiere);
   text-align: center;
 }
 

@@ -64,36 +64,40 @@ export function Verrouillage({
 
   const bloque = reste > 0
   return (
-    <form className="verrou" onSubmit={(evenement) => void essayer(evenement)}>
-      <h1>Ingenious</h1>
-      <p className="discret">Entrez votre code pour ouvrir l’application.</p>
-      <div>
-        <label htmlFor="pin">Code</label>
-        <input
-          id="pin"
-          type="password"
-          inputMode="numeric"
-          autoComplete="current-password"
-          autoFocus
-          value={pin}
-          onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-          aria-describedby={message ? 'verrou-message' : undefined}
-        />
-      </div>
-      {message !== null && (
-        <p className="erreur-champ" id="verrou-message" role="alert">
-          {message}
+    // Un `main` autour du formulaire : c'est le premier écran de quiconque a un
+    // code, et sans repère de page un lecteur d'écran n'a nulle part où sauter.
+    <main className="verrou">
+      <form onSubmit={(evenement) => void essayer(evenement)}>
+        <h1>Ingenious</h1>
+        <p className="discret">Entrez votre code pour ouvrir l’application.</p>
+        <div>
+          <label htmlFor="pin">Code</label>
+          <input
+            id="pin"
+            type="password"
+            inputMode="numeric"
+            autoComplete="current-password"
+            autoFocus
+            value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+            aria-describedby={message ? 'verrou-message' : undefined}
+          />
+        </div>
+        {message !== null && (
+          <p className="erreur-champ" id="verrou-message" role="alert">
+            {message}
+          </p>
+        )}
+        <button type="submit" disabled={occupe || bloque || pin.length < PIN_LONGUEUR_MIN}>
+          {bloque ? `Patientez ${Math.ceil(reste / 1000)} s` : occupe ? 'Vérification…' : 'Ouvrir'}
+        </button>
+        <p className="discret">
+          Le code chiffre les données de cet appareil. Il n’est récupérable par aucun moyen.
         </p>
-      )}
-      <button type="submit" disabled={occupe || bloque || pin.length < PIN_LONGUEUR_MIN}>
-        {bloque ? `Patientez ${Math.ceil(reste / 1000)} s` : occupe ? 'Vérification…' : 'Ouvrir'}
-      </button>
-      <p className="discret">
-        Le code chiffre les données de cet appareil. Il n’est récupérable par aucun moyen.
-      </p>
-      <button type="button" className="secondaire" onClick={onOublie}>
-        Code oublié
-      </button>
-    </form>
+        <button type="button" className="secondaire" onClick={onOublie}>
+          Code oublié
+        </button>
+      </form>
+    </main>
   )
 }
