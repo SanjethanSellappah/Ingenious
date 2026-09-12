@@ -31,4 +31,11 @@ export default tseslint.config(
     extends: [js.configs.recommended],
     languageOptions: { globals: globals.node },
   },
+  {
+    // Les audits pilotent un navigateur : ils tournent sous Node, mais les
+    // fonctions passées à `page.evaluate` sont évaluées dans la page. Les deux
+    // jeux de variables globales y sont donc légitimes.
+    files: ['scripts/audit/**/*.mjs'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
 )

@@ -16,7 +16,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "icones": "node scripts/generer-icones.mjs"
+    "icones": "node scripts/generer-icones.mjs",
+    "audit": "node scripts/audit/executer.mjs"
   },
   "dependencies": {
     "dexie": "^4.4.6",
@@ -36,6 +37,7 @@
     "fake-indexeddb": "^6.2.5",
     "globals": "^17.12.0",
     "jsdom": "^30.0.1",
+    "playwright-core": "^1.63.0",
     "prettier": "^3.9.6",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.70.0",

@@ -431,7 +431,40 @@ l'application vient de refuser de s'ouvrir, ce n'est pas ce qu'on met en
 premier. La cause est nommée en français, avec ce qu'il y a à faire ; le détail
 technique reste, en second rideau.
 
-### 5.11 `Date` confiné, et la règle vérifiée
+### 5.11 Deux surfaces vérifiées sans correction
+
+**Mise à jour d'une application installée.** Deux versions servies
+successivement : la saisie en cours n'est pas emportée, la nouvelle version est
+servie au rechargement, l'ancien cache est nettoyé, le hors ligne continue de
+fonctionner. Aucune requête en échec. Le paquet n'est pas découpé en morceaux
+chargés à la demande, ce qui écarte le piège habituel — une page ancienne
+réclamant un fragment que le nouveau cache a supprimé.
+
+**Reverrouillage en arrière-plan.** Trente secondes : l'application reste
+ouverte. Cent cinquante : elle redemande le code, et rend ensuite l'écran où
+l'on était. Le compteur repart au déverrouillage.
+
+### 5.12 Les audits ont été versionnés — et l'un d'eux mentait
+
+Les vingt-trois scripts de navigateur vivaient dans un répertoire temporaire.
+Ils sont maintenant dans `scripts/audit/`, avec `npm run audit`.
+
+En les rassemblant, deux défauts du dispositif lui-même :
+
+- Les scripts **affichaient** leurs problèmes et **sortaient sur zéro**. Le
+  lanceur, qui ne lit pas le français, les comptait pour des succès. Chacun
+  rend désormais un code de sortie qui est son verdict.
+- Le lanceur **ne vérifiait pas le serveur** qu'il croyait avoir démarré. Un
+  serveur resté d'une exécution précédente gardait le port ; Vite en prenait un
+  autre en silence, et les audits interrogeaient une version périmée du site.
+  Vingt et un succès qui ne voulaient rien dire. Le port occupé est maintenant
+  un refus, et Vite est lancé directement plutôt que par `npx`, qui laissait
+  l'enfant derrière lui.
+
+Le dispositif a été éprouvé sur une faute délibérée — une palette au contraste
+de 1,6 — et il l'a signalée écran par écran.
+
+### 5.13 `Date` confiné, et la règle vérifiée
 
 Une date métier est une chaîne `YYYY-MM-DD` ; un `Date` promené dans le calcul
 se décale d'un jour selon le fuseau, sans lever d'exception. La règle existait

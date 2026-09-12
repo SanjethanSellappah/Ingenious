@@ -4,3 +4,8 @@ dev-dist/
 coverage/
 *.local
 .DS_Store
+
+# Captures prises par les audits, jamais versionnées.
+*.png
+!public/*.png
+!scripts/audit/*.md
