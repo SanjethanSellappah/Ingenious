@@ -11,6 +11,7 @@ import {
   resteAVivreDe,
 } from '../domain/vues'
 import { CourbeSolde } from '../ui/CourbeSolde'
+import { Icone } from '../ui/Icone'
 import { Montant } from '../ui/Montant'
 
 /**
@@ -86,10 +87,12 @@ export function Accueil() {
         )}
       </div>
 
+      {/* Un rappel permanent, pas une urgence : il ne doit pas disputer l'œil à
+          l'échéance qu'on peut confirmer tout de suite. */}
       {rappel.du && (
-        <div className="carte a-confirmer">
+        <div className="carte carte-rappel">
           <h2>
-            <span aria-hidden="true">💾</span> Sauvegarde
+            <Icone nom="sauvegarde" taille={18} /> Sauvegarde
           </h2>
           <p className="discret">
             {rappel.dernier === null
@@ -106,7 +109,7 @@ export function Accueil() {
       {aConfirmer.length > 0 && (
         <div className="carte a-confirmer">
           <h2>
-            <span aria-hidden="true">⏳</span> À confirmer
+            <Icone nom="attente" taille={18} /> À confirmer
           </h2>
           <p className="discret">
             {aConfirmer.length === 1

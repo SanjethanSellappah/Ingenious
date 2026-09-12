@@ -7,6 +7,7 @@ import { useEtat } from '../app/useEtat'
 import { installationProposee, installer, sabonnerInstallation } from '../app/installation'
 import { PIN_LONGUEUR_RECOMMANDEE } from '../app/verrou'
 import type { EtatPersistance } from '../storage/persistance'
+import { Icone } from '../ui/Icone'
 import { Montant } from '../ui/Montant'
 import { SaisieMontant } from '../ui/SaisieMontant'
 
@@ -130,7 +131,7 @@ export function Reglages({
       {rappel.du && (
         <div className="carte a-confirmer">
           <h2>
-            <span aria-hidden="true">💾</span> Sauvegarde
+            <Icone nom="sauvegarde" taille={18} /> Sauvegarde
           </h2>
           <p>
             {rappel.dernier === null

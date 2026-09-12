@@ -62,6 +62,35 @@ h3 {
   line-height: 1.2;
 }
 
+/* Une échelle posée plutôt que celle du navigateur : un titre à 2 em mange un
+   tiers de l'écran d'un téléphone pour deux mots, et fait défiler pour le
+   chiffre qu'on vient consulter. */
+h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: 1.0625rem;
+  font-weight: 650;
+}
+
+h3 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+a {
+  /* Le soulignement est réservé au texte courant, où il distingue un lien d'une
+     phrase. Une action déjà détachée n'en a pas besoin. */
+  text-decoration: none;
+}
+
+p a {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 /* --- Disposition ---------------------------------------------------------- */
 
 .coquille {
@@ -83,7 +112,7 @@ h3 {
 }
 
 .page > header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 /* Un en-tête qui porte une action : le titre garde sa place, l'action se range
@@ -122,8 +151,8 @@ h3 {
   background: var(--fond-carte);
   border: 1px solid var(--trait);
   border-radius: var(--rayon);
-  padding: 1rem 1.125rem;
-  margin-bottom: 1rem;
+  padding: 0.875rem 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .carte h2 {
@@ -172,9 +201,20 @@ h3 {
   box-shadow: inset 0 2px 0 var(--accent);
 }
 
-.onglets .pictogramme {
-  font-size: 1.25rem;
-  line-height: 1;
+/* Les icônes suivent la couleur du texte : l'onglet actif les colore avec son
+   libellé, sans qu'il faille les redéclarer. */
+.icone {
+  display: block;
+  flex: 0 0 auto;
+}
+
+/* Dans un titre, l'icône s'aligne sur la ligne de base du texte plutôt que de
+   flotter au-dessus. */
+h2 > .icone,
+h1 > .icone {
+  display: inline-block;
+  vertical-align: -0.15em;
+  margin-right: 0.375rem;
 }
 
 /* --- Montants ------------------------------------------------------------- */
@@ -548,15 +588,43 @@ button.secondaire {
   overflow-wrap: anywhere;
 }
 
+/*
+ * Une carte qui appelle une action.
+ *
+ * Un cerclage complet crie aussi fort qu'un autre, et deux cartes cerclées
+ * côte à côte ne se hiérarchisent plus : tout devient urgent, donc rien ne
+ * l'est. Un liseré à gauche suffit à sortir du flot, et le fond légèrement
+ * teinté fait le reste.
+ */
 .a-confirmer {
-  border-color: var(--attention);
+  border-color: var(--trait);
+  border-left: 3px solid var(--attention);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--attention) 8%, transparent), transparent 40%),
+    var(--fond-carte);
+}
+
+.a-confirmer h2 {
+  color: var(--encre);
 }
 
 .lien-action {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
   margin-top: 0.75rem;
+  padding: 0.4375rem 0.75rem;
   color: var(--accent);
   font-weight: 600;
+  font-size: 0.9375rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.lien-action::after {
+  content: '→';
+  font-weight: 400;
 }
 
 /* --- Segments (entrée / sortie / virement) -------------------------------- */
@@ -710,9 +778,21 @@ button.secondaire {
   border: 0;
 }
 
+/*
+ * Trois poids d'action, et pas un de plus.
+ *
+ * Un écran où cinq boutons pleins se valent ne hiérarchise rien : l'œil n'a
+ * aucune raison d'aller à l'un plutôt qu'à l'autre, et l'action principale se
+ * noie parmi les issues secondaires. Le vert plein est donc réservé à **une**
+ * action par écran ; le reste est un contour ; et ce qui n'est pas une action
+ * mais un déplacement d'un écran à l'autre n'a pas à ressembler à un bouton.
+ */
 .lien-bouton {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: 1;
+  min-height: 2.75rem;
   text-align: center;
   background: var(--accent);
   color: #06210f;
@@ -720,6 +800,39 @@ button.secondaire {
   padding: 0.75rem 1.25rem;
   font-weight: 600;
   text-decoration: none;
+}
+
+.lien-bouton.secondaire {
+  background: transparent;
+  border: 1px solid var(--trait);
+  color: var(--encre);
+}
+
+/* Se rendre ailleurs, pas agir : une rangée de renvois discrets. */
+.renvois {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.renvois a {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--trait);
+  border-radius: var(--rayon-petit);
+  background: var(--fond-carte);
+  color: var(--encre);
+  font-size: 0.9375rem;
+}
+
+.renvois a::after {
+  content: '→';
+  color: var(--encre-faible);
 }
 
 .case {

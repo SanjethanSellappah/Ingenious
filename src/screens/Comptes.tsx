@@ -7,6 +7,7 @@ import { useEtat } from '../app/useEtat'
 import { basculerDiscretion, montantsMasques, sabonnerDiscretion } from '../app/discretion'
 import type { Compte, Etat } from '../domain/etat'
 import { ancreDuCompte, mouvementsDuCompte, patrimoine, soldeDuCompte } from '../domain/selecteurs'
+import { Icone } from '../ui/Icone'
 import { Montant } from '../ui/Montant'
 
 const LIBELLES_TYPE: Record<string, string> = {
@@ -54,11 +55,13 @@ export function Comptes() {
         </p>
       </div>
 
+      {/* Une seule action pleine : la réconciliation est le geste de la semaine,
+          le virement reste à portée sans lui disputer l'œil. */}
       <div className="actions">
         <Link to="/reconciliation" className="lien-bouton">
           Réconcilier
         </Link>
-        <Link to="/ajout?sens=virement" className="lien-bouton">
+        <Link to="/ajout?sens=virement" className="lien-bouton secondaire">
           Virement
         </Link>
       </div>
@@ -73,19 +76,16 @@ export function Comptes() {
       )}
 
       <div className="actions">
-        <Link to="/comptes/nouveau" className="lien-bouton">
+        <Link to="/comptes/nouveau" className="lien-bouton secondaire">
           Nouveau compte
         </Link>
       </div>
 
-      <div className="actions">
-        <Link to="/abonnements" className="lien-bouton">
-          Abonnements
-        </Link>
-        <Link to="/depenses" className="lien-bouton">
-          Dépenses
-        </Link>
-      </div>
+      {/* Ni l'un ni l'autre n'est une action : ce sont deux écrans où se rendre. */}
+      <nav className="renvois" aria-label="Autres vues">
+        <Link to="/abonnements">Abonnements</Link>
+        <Link to="/depenses">Dépenses</Link>
+      </nav>
     </main>
   )
 }
@@ -110,7 +110,11 @@ function GroupeComptes({
           <div className="ligne-label">
             <span>
               <strong>{compte.nom}</strong>
-              <span className="discret"> · {LIBELLES_TYPE[compte.type] ?? compte.type}</span>
+              {/* Le type n'est répété que s'il apprend quelque chose : « Compte
+                  courant · Compte courant » ne renseigne personne. */}
+              {(LIBELLES_TYPE[compte.type] ?? compte.type) !== compte.nom && (
+                <span className="discret"> · {LIBELLES_TYPE[compte.type] ?? compte.type}</span>
+              )}
             </span>
             <Montant
               valeur={soldeDuCompte(etat, compte.id, jour)}
@@ -147,7 +151,7 @@ function BoutonDiscretion() {
       onClick={basculerDiscretion}
       aria-pressed={masque}
     >
-      <span aria-hidden="true">{masque ? '🙈' : '👁️'}</span>
+      <Icone nom={masque ? 'oeil-barre' : 'oeil'} taille={20} />
       <span className="hors-ecran">
         {masque ? 'Afficher les montants' : 'Masquer les montants'}
       </span>
