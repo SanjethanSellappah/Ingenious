@@ -41,6 +41,19 @@ export function dateCivileLocale(instant: Date): CivilDate {
   return depuisComposantes(instant.getFullYear(), instant.getMonth() + 1, instant.getDate())
 }
 
+/**
+ * Instant courant en ISO 8601 UTC, pour l'en-tête d'un export.
+ *
+ * C'est un horodatage de diagnostic, pas une date métier : il n'entre dans aucun
+ * calcul. Il est ici parce que la règle n'a de valeur que si elle est absolue —
+ * un seul `Date` toléré ailleurs, et plus personne ne sait où chercher quand un
+ * chiffre se décale d'un jour. `grep -r "new Date" src --exclude clock.ts` doit
+ * rester vide.
+ */
+export function horodatageISO(): string {
+  return new Date(maintenant()).toISOString()
+}
+
 /** Fixe la source d'instant. Réservé aux tests. */
 export function fixerHorloge(instant: Date | SourceInstant): void {
   source = typeof instant === 'function' ? instant : () => instant

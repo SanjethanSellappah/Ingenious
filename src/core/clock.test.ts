@@ -60,3 +60,41 @@ describe('dateCivileLocale', () => {
     expect(dateCivileLocale(new Date('2028-02-29T10:00:00Z'))).toBe('2028-02-29')
   })
 })
+
+/**
+ * La règle du module, vérifiée plutôt que promise.
+ *
+ * Un commentaire qui dit « pas de `Date` ailleurs » ne tient qu'aussi longtemps
+ * que quelqu'un le lit. Le décalage d'un jour qu'il évite ne lève aucune
+ * exception : il produit un chiffre faux, silencieusement, et se retrouve des
+ * mois plus tard. Ce test est donc la seule forme utile de la règle.
+ */
+describe('confinement de Date', () => {
+  it('n’emploie Date nulle part ailleurs dans le code de production', () => {
+    // Lecture par le glob de Vite plutôt que par `node:fs` : la règle porte sur
+    // les sources telles que le bundle les voit, et ce test reste exécutable
+    // partout où l'application se construit.
+    const sources = import.meta.glob('/src/**/*.{ts,tsx}', {
+      query: '?raw',
+      import: 'default',
+      eager: true,
+    })
+
+    const fautifs: string[] = []
+    for (const [chemin, source] of Object.entries(sources)) {
+      if (/\.test\.tsx?$/.test(chemin)) continue
+      if (chemin.endsWith('/src/core/clock.ts')) continue
+      for (const [rang, ligne] of source.split('\n').entries()) {
+        // Les mentions en commentaire sont permises : c'est ce qui explique la règle.
+        if (/^\s*(\/\/|\*|\/\*)/.test(ligne)) continue
+        if (/\bnew Date\b|\bDate\.now\b/.test(ligne)) {
+          fautifs.push(`${chemin}:${rang + 1} ${ligne.trim()}`)
+        }
+      }
+    }
+
+    // Le détecteur doit voir quelque chose, sinon il passe à vide.
+    expect(Object.keys(sources).length).toBeGreaterThan(20)
+    expect(fautifs).toEqual([])
+  })
+})

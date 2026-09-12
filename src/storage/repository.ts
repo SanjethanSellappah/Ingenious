@@ -9,7 +9,7 @@
  * perdu. L'export est donc en clair : il doit rester lisible et réimportable
  * dans dix ans avec n'importe quel outil, pas seulement avec cette application.
  */
-import { maintenant } from '../core/clock'
+import { horodatageISO, maintenant } from '../core/clock'
 import {
   FORMAT_JOURNAL,
   fusionnerJournaux,
@@ -130,7 +130,7 @@ export async function ouvrirDepot(
       format: FORMAT_JOURNAL,
       version: VERSION_JOURNAL,
       chiffre: false,
-      genere_le: new Date(maintenant()).toISOString(),
+      genere_le: horodatageISO(),
       appareil,
       events: evenements,
     }

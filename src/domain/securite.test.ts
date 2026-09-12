@@ -113,6 +113,30 @@ describe('charges utiles hostiles', () => {
     expect(lecture.evenements).toHaveLength(1)
     expect(lecture.rejets).toHaveLength(3)
   })
+
+  /**
+   * Le compte des refus ne suffit pas : c'est la raison qui se corrige.
+   *
+   * L'écran d'import affiche ces phrases telles quelles. Elles doivent donc
+   * désigner **le rang de l'événement et le champ fautif** — « 412 refusés » ne
+   * laisse rien à faire, « event[3].payload.date : date civile attendue » se
+   * corrige dans le fichier.
+   */
+  it('nomme le rang et le champ fautif de chaque refus', () => {
+    const lecture = validerEvenements([
+      enveloppe({ id: 'c1', nom: 'A', type: 'courant', groupe: 'bancaire', mode: 'saisi' }),
+      enveloppe(
+        { id: 't1', account_id: 'c1', date: '2026-02-30', montant_cents: -100, origine: 'saisi' },
+        'transaction.created',
+      ),
+      enveloppe({ account_id: 'c1', date: '2026-09-11', solde_cents: 1.5 }, 'account.balance_set'),
+    ])
+    expect(lecture.rejets.map((r) => r.index)).toEqual([1, 2])
+    expect(lecture.rejets[0]!.raison).toContain('event[1].payload.date')
+    expect(lecture.rejets[0]!.raison).toMatch(/date civile/)
+    expect(lecture.rejets[1]!.raison).toContain('event[2].payload.solde_cents')
+    expect(lecture.rejets[1]!.raison).toMatch(/entier sûr/)
+  })
 })
 
 describe('fichier d’import hostile', () => {

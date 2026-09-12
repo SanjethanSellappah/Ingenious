@@ -15,6 +15,15 @@ import { SaisieMontant } from '../ui/SaisieMontant'
  * L'export a été livré ici avant tout écran de saisie : la règle du plan est
  * qu'aucune donnée réelle n'entre avant que le filet existe.
  */
+
+/**
+ * Combien de refus d'import on détaille.
+ *
+ * Un fichier corrompu en produit parfois des milliers, tous identiques : les
+ * afficher tous noierait la seule information utile, qui est la première ligne.
+ * Assez pour distinguer « une date invalide » de « ce fichier n'est pas le bon ».
+ */
+const MAX_REFUS_AFFICHES = 5
 export function Reglages({
   persistance,
   aUnPin,
@@ -28,6 +37,7 @@ export function Reglages({
 }) {
   const { etat, journal, rejets } = useEtat()
   const [message, setMessage] = useState<string | null>(null)
+  const [refus, setRefus] = useState<string[]>([])
   const [occupe, setOccupe] = useState(false)
   const champFichier = useRef<HTMLInputElement>(null)
   const rappel = rappelSauvegarde()
@@ -61,6 +71,7 @@ export function Reglages({
       return
     }
     setOccupe(true)
+    setRefus([])
     try {
       // Le contenu est lu **avant** toute remise à zéro du champ : vider
       // `input.value` invalide la source du fichier, et la lecture reste alors
@@ -72,6 +83,10 @@ export function Reglages({
         `${resultat.ajoutes} ajoutés, ${resultat.deja} déjà présents` +
           (resultat.rejets.length > 0 ? `, ${resultat.rejets.length} refusés.` : '.'),
       )
+      // La raison, pas seulement le compte. Un import qui annonce
+      // « 412 refusés » et s'arrête là ne laisse rien à faire ; la même phrase
+      // suivie de « event[3].payload.date : date civile attendue » se corrige.
+      setRefus(resultat.rejets.map((rejet) => rejet.raison))
     } catch (erreur) {
       setMessage(erreur instanceof Error ? erreur.message : String(erreur))
     } finally {
@@ -135,6 +150,19 @@ export function Reglages({
           <p className="discret" role="status">
             {message}
           </p>
+        )}
+        {refus.length > 0 && (
+          <div className="erreur-champ">
+            <p>Ce qui a été refusé, et pourquoi :</p>
+            <ul>
+              {refus.slice(0, MAX_REFUS_AFFICHES).map((raison, rang) => (
+                <li key={rang}>{raison}</li>
+              ))}
+            </ul>
+            {refus.length > MAX_REFUS_AFFICHES && (
+              <p>et {refus.length - MAX_REFUS_AFFICHES} autre(s) de la même nature.</p>
+            )}
+          </div>
         )}
       </div>
 
