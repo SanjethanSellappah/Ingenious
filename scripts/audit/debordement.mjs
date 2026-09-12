@@ -17,6 +17,7 @@ await page.waitForSelector('nav.onglets')
 // Du contenu long, pour éprouver la mise en page.
 await page.goto(base + '#/ajout', { waitUntil: 'networkidle' })
 await page.fill('input[inputmode="decimal"]', '1234,56')
+await page.selectOption('#nouveau-label-liste', '__nouveau__')
 await page.fill('#nouveau-label', 'Alimentation et produits ménagers')
 await page.fill(
   '#note',

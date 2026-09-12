@@ -22,6 +22,15 @@ export type ChoixLabel = {
   labelId: string
   /** Nom d'un label à créer. L'emporte sur `labelId` s'il est renseigné. */
   nouveauNom: string
+  /**
+   * L'utilisateur a demandé à en nommer un nouveau.
+   *
+   * Distinct d'un nom vide : on ouvre le champ de saisie dès le choix fait, donc
+   * avant que la première lettre soit tapée. Sans ce drapeau il faudrait un nom
+   * bidon pour marquer l'intention, et un nom bidon finit toujours par être
+   * enregistré un jour.
+   */
+  creation?: boolean
 }
 
 export type LabelResolu = {
@@ -33,6 +42,48 @@ export type LabelResolu = {
 
 /** Couleur par défaut d'un label créé à la volée. */
 export const COULEUR_LABEL = '#4ade80'
+
+/**
+ * Postes courants, proposés avant d'exister.
+ *
+ * Une liste vide au premier usage oblige à inventer une nomenclature au moment
+ * précis où l'on veut juste noter une dépense — et c'est ainsi qu'on se retrouve
+ * avec « courses », « Courses alim » et « bouffe » pour la même chose.
+ *
+ * Ils ne sont pas écrits dans le journal tant que personne ne les choisit : une
+ * application neuve ne doit pas arriver avec six événements dont on n'a peut-être
+ * jamais l'usage. Le jour où l'un est choisi, il naît comme n'importe quel autre.
+ */
+export const LABELS_COURANTS = [
+  'Alimentation',
+  'Logement',
+  'Transport',
+  'Loisirs',
+  'Santé',
+  'Abonnements',
+] as const
+
+export type Suggestion = { nom: string; existe: boolean; id?: string }
+
+/**
+ * Ce qu'on propose à l'utilisateur : ses labels, puis les courants qui manquent.
+ *
+ * Les siens d'abord — ce sont ceux qu'il emploie. Un poste courant déjà créé
+ * n'est pas proposé deux fois.
+ */
+export function suggestionsLabels(etat: Etat): Suggestion[] {
+  const siens = labelsActifs(etat).map((label) => ({
+    nom: label.nom,
+    existe: true,
+    id: label.id,
+  }))
+  const pris = new Set(siens.map((s) => normaliserNom(s.nom)))
+  const courants = LABELS_COURANTS.filter((nom) => !pris.has(normaliserNom(nom))).map((nom) => ({
+    nom,
+    existe: false,
+  }))
+  return [...siens, ...courants]
+}
 
 /**
  * Rend le label à employer, en créant celui qui manque.

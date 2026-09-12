@@ -12,7 +12,7 @@ import { echeancesDesRecurrences, type Recurrence, type ResultatEcheances } from
 import { cents, negatif, type Cents } from '../core/money'
 import { projeterSolde, type EcheanceProjetee, type Projection } from '../core/projection'
 import { resteAVivre, type ResteAVivre } from '../core/resteAVivre'
-import type { Etat } from './etat'
+import type { Etat, Transaction } from './etat'
 import { realiseesDe, soldeDuCompte } from './selecteurs'
 
 /** Horizon par défaut des projections : deux mois suffisent à voir le point bas. */
@@ -52,6 +52,25 @@ export function recurrencesDe(etat: Etat, account_id?: string): Recurrence[] {
  * pas encore passée déplace le solde autant qu'une échéance récurrente, et
  * l'oublier ferait mentir la projection.
  */
+/**
+ * Comment nommer une transaction dans une liste.
+ *
+ * La note d'abord — c'est ce que l'utilisateur a écrit. À défaut, le poste de
+ * dépense : il a été choisi, il désigne quelque chose, et le taire pour
+ * afficher « Échéance » revient à effacer la seule chose qu'on savait de cette
+ * ligne. Le mot générique ne reste que pour une dépense sans note ni poste, et
+ * il dit au moins son sens plutôt que de faire passer une dépense ponctuelle
+ * pour une échéance récurrente.
+ */
+function libelleTransaction(etat: Etat, transaction: Transaction): string {
+  if (transaction.note !== undefined && transaction.note.trim() !== '') return transaction.note
+  if (transaction.label_id !== undefined) {
+    const label = etat.labels.get(transaction.label_id)
+    if (label) return label.nom
+  }
+  return transaction.montant_cents < 0 ? 'Dépense' : 'Rentrée'
+}
+
 export function echeancesDuCompte(
   etat: Etat,
   account_id: string,
@@ -70,7 +89,7 @@ export function echeancesDuCompte(
       borne_basse_cents: transaction.montant_cents,
       borne_haute_cents: transaction.montant_cents,
       estime: false,
-      ...(transaction.note !== undefined ? { libelle: transaction.note } : {}),
+      libelle: libelleTransaction(etat, transaction),
     })
   }
 

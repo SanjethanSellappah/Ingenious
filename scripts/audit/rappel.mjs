@@ -33,6 +33,7 @@ dit('2.', 'rappel après export : ' + (await rappelPresent()))
 
 await page.goto(base + '#/ajout', { waitUntil: 'networkidle' })
 await page.fill('input[inputmode="decimal"]', '30')
+await page.selectOption('#nouveau-label-liste', '__nouveau__')
 await page.fill('#nouveau-label', 'courses')
 await page.click('button:has-text("Enregistrer")')
 await page.waitForSelector('h1:has-text("Reste à vivre")')

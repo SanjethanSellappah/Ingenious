@@ -81,10 +81,14 @@ await page.goto(base + '#/abonnements/nouveau', { waitUntil: 'networkidle' })
 await page.fill('#nom-abo', 'Courses hebdo')
 await page.locator('input[inputmode="decimal"]').first().fill('60')
 await page.fill('#jour-mois', '10')
-const champLabel = await page.locator('#label-abo').count()
-dit('4.', 'champ de création de label sur le formulaire : ' + (champLabel > 0))
-exiger(champLabel > 0, 'aucun moyen de nommer un label depuis le formulaire d’abonnement')
-await page.fill('#label-abo', 'Alimentation')
+const champLabel = await page.locator('#label-abo-liste').count()
+dit('4.', 'liste de labels sur le formulaire : ' + (champLabel > 0))
+exiger(champLabel > 0, 'aucun moyen de choisir un label depuis le formulaire d’abonnement')
+// « Nouveau label » doit être la première entrée de la liste.
+const premiere = await page.locator('#label-abo-liste option').first().textContent()
+dit('4b.', 'première entrée : ' + premiere?.trim())
+exiger(/Nouveau label/.test(premiere ?? ''), '« Nouveau label » n’est pas en tête de liste')
+await page.selectOption('#label-abo-liste', { label: 'Alimentation' })
 await page.click('button:has-text("Enregistrer")')
 await page.waitForSelector('h1:has-text("Abonnements")')
 
@@ -97,6 +101,7 @@ exiger(/Alimentation/.test(reglages), 'le label nommé sur l’abonnement n’a 
 // Le même nom sous une autre casse ne doit pas créer un second label.
 await page.goto(base + '#/ajout', { waitUntil: 'networkidle' })
 await page.locator('input[inputmode="decimal"]').first().fill('12')
+await page.selectOption('#nouveau-label-liste', '__nouveau__')
 await page.fill('#nouveau-label', 'ALIMENTATION')
 await page.click('button:has-text("Enregistrer")')
 await page.waitForTimeout(900)
@@ -106,6 +111,23 @@ const apres = (await page.locator('body').innerText()).replace(/\s+/g, ' ')
 const occurrences = (apres.match(/Alimentation/gi) ?? []).length
 dit('6.', 'occurrences du label après une saisie en majuscules : ' + occurrences)
 exiger(occurrences === 1, `la casse a créé un second label : ${occurrences} occurrences`)
+
+// --- Une dépense sans note porte le nom de son poste, pas « Échéance » ---
+await page.goto(base + '#/ajout', { waitUntil: 'networkidle' })
+await page.locator('input[inputmode="decimal"]').first().fill('42')
+await page.selectOption('#nouveau-label-liste', { label: 'Alimentation' })
+await page.click('button:has-text("Enregistrer")')
+await page.waitForTimeout(900)
+await page.goto(base + '#/calendrier', { waitUntil: 'networkidle' })
+await page.waitForTimeout(500)
+const calendrier = (await page.locator('body').innerText()).replace(/\s+/g, ' ')
+const duMois = calendrier.slice(calendrier.indexOf('Échéances du mois'))
+dit('6b.', 'calendrier : ' + duMois.slice(0, 100))
+exiger(
+  !/·\s*Échéance\s/.test(duMois),
+  'une dépense sans note s’affiche « Échéance » au lieu de son poste',
+)
+exiger(/Alimentation/.test(duMois), 'le poste de la dépense n’apparaît pas dans le calendrier')
 
 // --- La courbe : le temps en abscisse, les montants en ordonnée ---
 await page.goto(base + '#/', { waitUntil: 'networkidle' })

@@ -4,6 +4,7 @@ import { formaterMontant, type Cents } from '../core/money'
 import { depotCourant, ecrire, recharger } from '../app/magasin'
 import { marquerExport, rappelSauvegarde } from '../app/automatismes'
 import { useEtat } from '../app/useEtat'
+import { labelsActifs, resoudreLabel, suggestionsLabels } from '../domain/labels'
 import { installationProposee, installer, sabonnerInstallation } from '../app/installation'
 import { PIN_LONGUEUR_RECOMMANDEE } from '../app/verrou'
 import type { EtatPersistance } from '../storage/persistance'
@@ -464,8 +465,32 @@ function GestionLabels() {
   const [enEdition, setEnEdition] = useState<string | null>(null)
   const [budget, setBudget] = useState<Cents | null>(null)
   const [nom, setNom] = useState('')
+  const [nouveau, setNouveau] = useState('')
   const [occupe, setOccupe] = useState(false)
-  const labels = [...etat.labels.values()].filter((label) => label.archived_at === undefined)
+  const labels = labelsActifs(etat)
+  // Les postes courants qui manquent encore : un appui les crée.
+  const aProposer = suggestionsLabels(etat).filter((s) => !s.existe)
+
+  /**
+   * Créer un label sans passer par une dépense.
+   *
+   * Un label ne naissait que rattaché à une saisie. Préparer sa nomenclature
+   * avant de commencer — ce que fait tout le monde le premier jour — était donc
+   * impossible : il fallait inventer une dépense pour chaque poste, puis la
+   * supprimer.
+   */
+  async function creer(propose: string) {
+    const propre = propose.trim()
+    if (propre === '') return
+    setOccupe(true)
+    try {
+      const { entrees } = resoudreLabel(etat, { labelId: '', nouveauNom: propre })
+      if (entrees.length > 0) await ecrire(entrees)
+      setNouveau('')
+    } finally {
+      setOccupe(false)
+    }
+  }
 
   async function poserBudget(id: string, montant: Cents | null) {
     setOccupe(true)
@@ -508,8 +533,42 @@ function GestionLabels() {
   return (
     <div className="carte">
       <h2>Labels</h2>
+
+      <div className="champ">
+        <label htmlFor="creer-label">Créer un label</label>
+        <div className="ligne-saisie">
+          <input
+            id="creer-label"
+            value={nouveau}
+            autoComplete="off"
+            placeholder="Restaurant, Ménage, Cadeaux…"
+            onChange={(e) => setNouveau(e.target.value)}
+          />
+          <button
+            type="button"
+            disabled={occupe || nouveau.trim() === ''}
+            onClick={() => void creer(nouveau)}
+          >
+            Ajouter
+          </button>
+        </div>
+      </div>
+
+      {aProposer.length > 0 && (
+        <div className="champ">
+          <span className="etiquette">Postes courants</span>
+          <div className="raccourcis" role="group" aria-label="Postes courants à ajouter">
+            {aProposer.map((s) => (
+              <button key={s.nom} type="button" disabled={occupe} onClick={() => void creer(s.nom)}>
+                + {s.nom}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {labels.length === 0 ? (
-        <p className="discret">Aucun label. Ils se créent à la volée depuis l’ajout rapide.</p>
+        <p className="discret">Aucun label pour l’instant.</p>
       ) : (
         <ul className="liste">
           {labels.map((label) => (

@@ -97,6 +97,7 @@ dit('E.', 'mois vide : ' + (await page.locator('.carte .discret').last().textCon
 // F. Réglages : budget d'un label, puis archivage
 await page.goto(base + '#/ajout', { waitUntil: 'networkidle' })
 await page.fill('input[inputmode="decimal"]', '60')
+await page.selectOption('#nouveau-label-liste', '__nouveau__')
 await page.fill('#nouveau-label', 'Courses')
 await page.click('button:has-text("Enregistrer")')
 await page.waitForSelector('h1:has-text("Reste à vivre")')

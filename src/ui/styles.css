@@ -252,6 +252,29 @@ h1 > .icone {
   border: 0;
 }
 
+/* Un champ qui naît d'un choix fait au-dessus : décalé et rattaché, pour qu'on
+   voie d'où il vient. */
+/* Un champ et son bouton sur la même ligne : « ajouter » n'a de sens qu'à côté
+   de ce qu'on ajoute. */
+.ligne-saisie {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.ligne-saisie input {
+  flex: 1;
+}
+
+.ligne-saisie button {
+  flex: 0 0 auto;
+}
+
+.champ-imbrique {
+  margin-top: 0.625rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--trait);
+}
+
 .ligne-bascule {
   display: flex;
   align-items: center;

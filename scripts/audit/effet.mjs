@@ -27,6 +27,7 @@ await page.waitForSelector('nav.onglets')
 // Un label, puis un loyer rattaché à ce label, dont l'échéance est déjà passée.
 await page.goto(base + '#/ajout', { waitUntil: 'networkidle' })
 await page.fill('input[inputmode="decimal"]', '10')
+await page.selectOption('#nouveau-label-liste', '__nouveau__')
 await page.fill('#nouveau-label', 'Logement')
 await page.click('button:has-text("Enregistrer")')
 await page.waitForSelector('h1:has-text("Reste à vivre")')
@@ -36,8 +37,8 @@ await page.fill('#nom-abo', 'Loyer')
 await page.fill('input[inputmode="decimal"]', '700')
 await page.fill('#jour-mois', '5')
 await page.fill('#debut', '2026-08-05')
-// Le label existant se choisit d'un appui ; c'est le geste réel.
-await page.click('.champ:has(#label-abo) button:has-text("Logement")')
+// Le label existant se choisit dans la liste ; c'est le geste réel.
+await page.selectOption('#label-abo-liste', { label: 'Logement' })
 await page.click('button:has-text("Enregistrer")')
 await page.waitForSelector('h1:has-text("Abonnements")')
 
