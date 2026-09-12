@@ -17,10 +17,11 @@ import { soldeDuCompte } from '../domain/selecteurs'
 import { ecrire } from './magasin'
 
 /** Un instantané par compte et par jour, au plus. */
-export async function enregistrerInstantanes(etat: Etat, jour: CivilDate = aujourdhui()): Promise<number> {
-  const dejaFait = new Set(
-    etat.instantanes.filter((i) => i.date === jour).map((i) => i.account_id),
-  )
+export async function enregistrerInstantanes(
+  etat: Etat,
+  jour: CivilDate = aujourdhui(),
+): Promise<number> {
+  const dejaFait = new Set(etat.instantanes.filter((i) => i.date === jour).map((i) => i.account_id))
   const entrees: Parameters<typeof ecrire>[0][number][] = []
 
   for (const compte of etat.comptes.values()) {

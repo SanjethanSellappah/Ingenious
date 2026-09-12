@@ -40,6 +40,11 @@ export async function ouvrirJournal(base: BaseIngenious, verrou: Verrou): Promis
   await brancherDepot(await ouvrirDepot({ base, chiffreur: verrou.chiffreur }))
 }
 
+/** Enregistre une enveloppe de coffre mise à jour — changement de code. */
+export async function enregistrerCoffre(base: BaseIngenious, meta: MetaCoffre): Promise<void> {
+  await base.meta.put({ cle: CLE_COFFRE, valeur: meta })
+}
+
 /**
  * Active un coffre neuf sur une base existante.
  *

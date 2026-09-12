@@ -194,7 +194,28 @@ personne n'irait chercher là.
 L'archivage clôt désormais les abonnements rattachés, dans la même écriture, et
 l'écran de confirmation les nomme avant de le faire.
 
-### 4.10 Accessibilité, mesurée
+### 4.10 Un code oublié rendait l'appareil définitivement inutilisable — _corrigé_
+
+Le code est irrécupérable, c'est une décision assumée. Mais **aucune issue
+n'existait** : un appareil verrouillé le restait pour toujours, y compris pour
+quelqu'un tenant sa sauvegarde en main. Tout le discours de l'application repose
+sur « l'export est le filet » — encore faut-il un endroit où le lancer.
+
+L'écran de verrouillage propose désormais « Code oublié », qui mène à un
+effacement explicite : trois avertissements, et la phrase `EFFACER` à recopier à
+la main — pas une case à cocher, qu'on coche sans lire. L'application redémarre
+alors vierge et l'export se réimporte.
+
+**Ce que cela ouvre, assumé** : quelqu'un qui a le téléphone peut détruire les
+données sans connaître le code. Il ne peut pas les lire — c'est la seule chose
+que le chiffrement promet — et il pouvait déjà désinstaller l'application. Le
+risque ajouté est nul ; l'impasse qu'il lève est réelle.
+
+**Changer de code** est également possible depuis Réglages : seule l'enveloppe
+de la clé est refaite, aucune donnée n'est re-chiffrée. C'était l'intérêt du
+chiffrement à enveloppe, resté jusqu'ici sans interface.
+
+### 4.11 Accessibilité, mesurée
 
 Audit automatisé sur les neuf écrans, application remplie : 255 textes contrôlés.
 Aucun contraste sous le seuil AA, aucun champ sans étiquette, aucun bouton sans

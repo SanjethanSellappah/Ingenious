@@ -13,10 +13,12 @@ export function Verrouillage({
   verrou,
   onVerrou,
   onOuvert,
+  onOublie,
 }: {
   verrou: Verrou
   onVerrou: (verrou: Verrou) => void
   onOuvert: (verrou: Verrou) => void
+  onOublie: () => void
 }) {
   const [pin, setPin] = useState('')
   const [message, setMessage] = useState<string | null>(null)
@@ -89,6 +91,9 @@ export function Verrouillage({
       <p className="discret">
         Le code chiffre les données de cet appareil. Il n’est récupérable par aucun moyen.
       </p>
+      <button type="button" className="secondaire" onClick={onOublie}>
+        Code oublié
+      </button>
     </form>
   )
 }

@@ -19,10 +19,12 @@ export function Reglages({
   persistance,
   aUnPin,
   onConfigurerPin,
+  onChangerPin,
 }: {
   persistance: EtatPersistance
   aUnPin: boolean
   onConfigurerPin: () => void
+  onChangerPin: () => void
 }) {
   const { etat, journal, rejets } = useEtat()
   const [message, setMessage] = useState<string | null>(null)
@@ -146,9 +148,16 @@ export function Reglages({
       <div className="carte">
         <h2>Code de verrouillage</h2>
         {aUnPin ? (
-          <p className="discret">
-            Un code est configuré. Les données de cet appareil sont chiffrées avec lui.
-          </p>
+          <>
+            <p className="discret">
+              Un code est configuré. Les données de cet appareil sont chiffrées avec lui.
+            </p>
+            <div className="actions">
+              <button type="button" className="secondaire" onClick={onChangerPin}>
+                Changer le code
+              </button>
+            </div>
+          </>
         ) : (
           <>
             <p className="discret">

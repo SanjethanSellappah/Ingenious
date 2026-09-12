@@ -15,8 +15,17 @@ import { Reconciliation } from '../screens/Reconciliation'
 import { Reglages } from '../screens/Reglages'
 import { BarreOnglets } from '../ui/BarreOnglets'
 import { enregistrerInstantanes } from './automatismes'
+import { ChangerCode } from './ChangerCode'
 import { ConfigurationPin } from './ConfigurationPin'
-import { activerCoffre, demarrer, ouvrirJournal, type Demarrage } from './demarrage'
+import { Recommencer } from './Recommencer'
+import type { MetaCoffre } from '../storage/crypto'
+import {
+  activerCoffre,
+  demarrer,
+  enregistrerCoffre,
+  ouvrirJournal,
+  type Demarrage,
+} from './demarrage'
 import { useEtat } from './useEtat'
 import { Verrouillage } from './Verrouillage'
 import { DELAI_REVERROUILLAGE_MS, verrouiller, type Verrou } from './verrou'
@@ -30,6 +39,8 @@ export function App() {
   const [verrou, setVerrou] = useState<Verrou | null>(null)
   const [echec, setEchec] = useState<string | null>(null)
   const [configuration, setConfiguration] = useState(false)
+  const [changement, setChangement] = useState(false)
+  const [oubli, setOubli] = useState(false)
 
   useEffect(() => {
     demarrer()
@@ -46,6 +57,18 @@ export function App() {
     (ouvert: Verrou) => {
       setVerrou(ouvert)
       if (demarrage) void ouvrirJournal(demarrage.base, ouvert)
+    },
+    [demarrage],
+  )
+
+  const surCodeChange = useCallback(
+    async (meta: MetaCoffre) => {
+      if (!demarrage) return
+      // Seule l'enveloppe change : le journal n'est pas retouché, et la clé de
+      // données reste la même. Rien à rechiffrer.
+      await enregistrerCoffre(demarrage.base, meta)
+      setVerrou((courant) => (courant === null ? courant : { ...courant, meta }))
+      setChangement(false)
     },
     [demarrage],
   )
@@ -83,7 +106,35 @@ export function App() {
   }
 
   if (verrou.etat.statut === 'verrouille') {
-    return <Verrouillage verrou={verrou} onVerrou={setVerrou} onOuvert={surOuverture} />
+    if (oubli) {
+      return (
+        <Recommencer
+          base={demarrage.base}
+          onAnnuler={() => setOubli(false)}
+          // Après effacement, l'application doit repartir d'un état vierge :
+          // recharger la page est plus sûr que de démonter l'arbre à la main.
+          onEfface={() => window.location.reload()}
+        />
+      )
+    }
+    return (
+      <Verrouillage
+        verrou={verrou}
+        onVerrou={setVerrou}
+        onOuvert={surOuverture}
+        onOublie={() => setOubli(true)}
+      />
+    )
+  }
+
+  if (changement && verrou.meta !== null) {
+    return (
+      <ChangerCode
+        verrou={verrou}
+        onAnnuler={() => setChangement(false)}
+        onChange={(meta) => void surCodeChange(meta)}
+      />
+    )
   }
 
   if (configuration) {
@@ -106,6 +157,7 @@ export function App() {
           persistance={demarrage.persistance}
           aUnPin={verrou.meta !== null}
           onConfigurerPin={() => setConfiguration(true)}
+          onChangerPin={() => setChangement(true)}
         />
       </HashRouter>
     </>
@@ -116,10 +168,12 @@ function Contenu({
   persistance,
   aUnPin,
   onConfigurerPin,
+  onChangerPin,
 }: {
   persistance: Demarrage['persistance']
   aUnPin: boolean
   onConfigurerPin: () => void
+  onChangerPin: () => void
 }) {
   const { etat, chargement } = useEtat()
   const [onboardingFini, setOnboardingFini] = useState(false)
@@ -167,7 +221,12 @@ function Contenu({
         <Route
           path="/reglages"
           element={
-            <Reglages persistance={persistance} aUnPin={aUnPin} onConfigurerPin={onConfigurerPin} />
+            <Reglages
+              persistance={persistance}
+              aUnPin={aUnPin}
+              onConfigurerPin={onConfigurerPin}
+              onChangerPin={onChangerPin}
+            />
           }
         />
         <Route path="*" element={<Accueil />} />
