@@ -318,7 +318,38 @@ enveloppé dans un `<main>`, la mise en page inchangée et mesurée.
 Le reste est propre sur les vingt et un écrans : aucun contraste sous le seuil
 AA, aucun champ sans étiquette, un seul `h1`, aucun saut de niveau de titre.
 
-### 5.5 `Date` confiné, et la règle vérifiée
+### 5.5 Restaurer exigeait d'abîmer ses données d'abord — _corrigé_
+
+Le téléphone remplacé est *le* cas pour lequel l'export existe. Or l'import ne
+vivait que dans Réglages, et Réglages n'est joignable qu'une fois l'application
+ouverte — c'est-à-dire une fois un compte créé. Pour récupérer sa sauvegarde, il
+fallait donc inventer un compte fictif, traverser tout le démarrage à froid, et
+seulement alors importer. Ce compte restait ensuite dans le patrimoine : le
+journal est append-only, on ne l'efface jamais, on l'archive au mieux.
+
+Demander d'abîmer ses données pour récupérer ses données n'est pas une procédure
+de secours. L'écran de bienvenue porte désormais la restauration.
+
+Un détail qui aurait annulé la correction précédente : une restauration réussie
+fait apparaître des comptes, donc l'application s'ouvre d'elle-même et l'écran
+disparaît — les refus s'y seraient affichés le temps d'un clignement, sur
+l'écran même où l'on répare une sauvegarde abîmée. Quand il reste quelque chose
+à lire, l'ouverture attend un clic.
+
+### 5.6 Fusion multi-appareils, éprouvée pour de bon
+
+L'union sur `id` sans arbitrage est la décision d'architecture dont tout le
+reste dépend. Elle n'avait jamais été conduite de bout en bout dans un
+navigateur, seulement testée unitairement.
+
+Trois appareils réels : A installé, B neuf restauré depuis A, puis saisies
+indépendantes de part et d'autre, échange croisé des exports. Vérifié —
+convergence stricte de ce que l'utilisateur voit (patrimoine, comptes,
+abonnements, taille du journal), réimport du même fichier sans effet, et le cas
+qui compte : A corrige un mouvement pendant que B le supprime. Même verdict des
+deux côtés, et sur un troisième appareil qui importe dans l'ordre inverse.
+
+### 5.7 `Date` confiné, et la règle vérifiée
 
 Une date métier est une chaîne `YYYY-MM-DD` ; un `Date` promené dans le calcul
 se décale d'un jour selon le fuseau, sans lever d'exception. La règle existait

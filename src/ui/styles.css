@@ -312,6 +312,17 @@ button.secondaire {
   flex: 1;
 }
 
+/*
+ * Une carte qui suit une rangée de boutons ne doit pas la toucher.
+ * `.actions` n'a qu'une marge haute et `.carte` qu'une marge basse : collées,
+ * elles se lisent comme un seul bloc, et le bouton semble appartenir à la carte
+ * d'en dessous. Le cas se présente partout où un écran propose une action puis
+ * une section — le formulaire de compte, le démarrage à froid.
+ */
+.actions + .carte {
+  margin-top: 1.5rem;
+}
+
 /* --- Courbe de solde ------------------------------------------------------ */
 
 /*

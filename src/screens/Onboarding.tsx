@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { aujourdhui } from '../core/clock'
 import { type Cents } from '../core/money'
-import { ecrire } from '../app/magasin'
+import { depotCourant, ecrire, recharger } from '../app/magasin'
 import { identifiant } from '../domain/identifiant'
 import { SaisieMontant } from '../ui/SaisieMontant'
 
@@ -14,6 +14,13 @@ import { SaisieMontant } from '../ui/SaisieMontant'
  *
  * L'abonnement est facultatif à cette étape : exiger trois saisies avant de
  * montrer quoi que ce soit est la meilleure façon de faire abandonner.
+ *
+ * Cet écran porte aussi la **restauration**, et ce n'est pas un détail. Le
+ * téléphone remplacé est exactement le cas pour lequel l'export existe ; sans
+ * issue ici, il faudrait inventer un compte fictif pour atteindre Réglages, et
+ * ce compte resterait dans le patrimoine — le journal est append-only, on ne
+ * l'effacerait jamais. Demander d'abîmer ses données pour récupérer ses données
+ * n'est pas une procédure de secours.
  */
 type Etape = 0 | 1 | 2
 
@@ -52,6 +59,58 @@ export function Onboarding({ onTermine }: { onTermine: () => void }) {
    */
   const [compteId] = useState(() => identifiant('compte'))
   const [abonnementId] = useState(() => identifiant('rentree'))
+
+  const champFichier = useRef<HTMLInputElement>(null)
+  const [messageImport, setMessageImport] = useState<string | null>(null)
+  const [refus, setRefus] = useState<string[]>([])
+
+  /**
+   * Restauration depuis un export, sans rien saisir au préalable.
+   *
+   * L'import fusionne comme partout ailleurs : si l'appareil portait déjà
+   * quelque chose, rien n'est écrasé. Une fois des comptes présents,
+   * l'application s'ouvre d'elle-même — l'accueil du démarrage à froid n'a plus
+   * de raison d'être.
+   */
+  async function restaurer(fichier: File) {
+    const depot = depotCourant()
+    if (!depot) {
+      setMessageImport('Le journal n’est pas encore ouvert. Réessayez dans un instant.')
+      return
+    }
+    setOccupe(true)
+    setMessageImport(null)
+    setRefus([])
+    try {
+      // Lu avant toute remise à zéro du champ : vider `input.value` invalide la
+      // source du fichier, et la lecture resterait en suspens pour toujours.
+      const texte = await fichier.text()
+      const resultat = await depot.importer(texte)
+      setRefus(resultat.rejets.map((rejet) => rejet.raison))
+      if (resultat.ajoutes === 0 && resultat.deja === 0) {
+        setMessageImport('Ce fichier n’a apporté aucun événement.')
+        return
+      }
+      setMessageImport(`${resultat.ajoutes} événements restaurés.`)
+      // `recharger` fait apparaître les comptes, et l'application s'ouvre aussitôt
+      // d'elle-même : cet écran disparaît. Tant qu'il reste quelque chose à lire,
+      // on ne recharge pas — sinon les refus s'afficheraient le temps d'un
+      // clignement, sur l'écran même où l'on répare une sauvegarde abîmée.
+      if (resultat.rejets.length > 0) return
+      await entrer()
+    } catch (erreur) {
+      setMessageImport(erreur instanceof Error ? erreur.message : String(erreur))
+    } finally {
+      setOccupe(false)
+      if (champFichier.current) champFichier.current.value = ''
+    }
+  }
+
+  /** Ouvre l'application sur les données restaurées. */
+  async function entrer() {
+    await recharger()
+    onTermine()
+  }
 
   async function terminer() {
     setOccupe(true)
@@ -169,9 +228,60 @@ export function Onboarding({ onTermine }: { onTermine: () => void }) {
           </div>
           <SaisieMontant libelle="Solde actuel" onChange={setSolde} />
           <div className="actions">
-            <button type="button" onClick={() => setEtape(1)} disabled={solde === null}>
+            <button type="button" onClick={() => setEtape(1)} disabled={solde === null || occupe}>
               Continuer
             </button>
+          </div>
+
+          <div className="carte">
+            <h2>Vous avez déjà une sauvegarde ?</h2>
+            <p className="discret">
+              Téléphone remplacé, application réinstallée : reprenez votre fichier d’export, il
+              contient tout. Rien à saisir ici.
+            </p>
+            <input
+              ref={champFichier}
+              type="file"
+              accept="application/json,.json"
+              hidden
+              onChange={(e) => {
+                const fichier = e.target.files?.[0]
+                if (fichier) void restaurer(fichier)
+              }}
+            />
+            <div className="actions">
+              <button
+                type="button"
+                className="secondaire"
+                onClick={() => champFichier.current?.click()}
+                disabled={occupe}
+              >
+                Restaurer une sauvegarde
+              </button>
+            </div>
+            {messageImport !== null && (
+              <p className="discret" role="status">
+                {messageImport}
+              </p>
+            )}
+            {refus.length > 0 && (
+              <>
+                <div className="erreur-champ">
+                  <p>Ce qui a été refusé, et pourquoi :</p>
+                  <ul>
+                    {refus.slice(0, 5).map((raison, rang) => (
+                      <li key={rang}>{raison}</li>
+                    ))}
+                  </ul>
+                  {refus.length > 5 && <p>et {refus.length - 5} autre(s) de la même nature.</p>}
+                </div>
+                <div className="actions">
+                  <button type="button" onClick={() => void entrer()} disabled={occupe}>
+                    Continuer avec ce qui a été lu
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </>
       )}
