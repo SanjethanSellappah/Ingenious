@@ -25,8 +25,9 @@ export async function demarrer(nomBase?: string): Promise<Demarrage> {
   const meta = enregistrement?.valeur as MetaCoffre | undefined
   const verrou = meta ? verrouFerme(meta) : verrouSansPin()
 
-  // Demandée au premier lancement. Le résultat est constaté, pas supposé : sur
-  // iOS l'appel n'accorde rien, seule l'installation protège.
+  // Demandée au premier lancement. Le résultat est constaté, pas supposé : les
+  // navigateurs y répondent différemment, et l'interface s'accorde à la réponse
+  // obtenue plutôt qu'à une supposition sur l'appareil.
   const persistance = await demanderPersistance()
 
   // Sans coffre, le journal est lisible tout de suite ; avec, il attend le code.

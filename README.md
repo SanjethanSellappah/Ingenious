@@ -33,9 +33,9 @@ journaux. Ils ne remplacent pas les tests unitaires : presque tous les défauts
 sérieux de ce projet ont été trouvés là et non dans les tests. Lancez-les sur un
 build à jour (`npm run build` d'abord).
 
-Ce qui reste à éprouver sur un vrai téléphone — l'export sous Safari, la
-persistance iOS, l'usage sur plusieurs semaines — est listé par ordre de risque
-dans [`docs/RECETTE.md`](docs/RECETTE.md).
+Ce qui reste à éprouver sur un vrai téléphone — l'installation, la feuille de
+partage, la persistance dans la durée, l'usage sur plusieurs semaines — est
+listé par ordre de risque dans [`docs/RECETTE.md`](docs/RECETTE.md).
 
 ## Architecture
 
@@ -99,8 +99,11 @@ une régularité qu'on ne peut pas tenir.
   au-dessus de tous les écrans et invite à exporter avant de fermer. C'est le
   seul accident qu'on ne peut pas constater soi-même — l'écran montre l'état en
   mémoire, qui a l'air juste, pendant que rien n'est enregistré.
-- Sur **iOS**, `navigator.storage.persist()` n'accorde rien : seule l'installation
-  sur l'écran d'accueil protège de la purge après quelques jours d'inactivité.
+- La **persistance du stockage** est demandée au navigateur, et l'état obtenu est
+  affiché tel quel plutôt que supposé : Chrome l'accorde en général à une
+  application installée, Safari sur iOS jamais. Dans tous les cas, l'installation
+  sur l'écran d'accueil protège de la purge, et l'export reste la vraie
+  sauvegarde.
 - La **projection est une prédiction**. L'interface montre toujours de quoi elle
   est faite, et où sa certitude s'arrête : trait plein avant la première
   occurrence estimée, pointillé et fourchette au-delà.

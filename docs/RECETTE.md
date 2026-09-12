@@ -6,71 +6,70 @@ l'échec coûterait des données, les dernières du confort.
 
 Adresse de l'application : `https://sanjethansellappah.github.io/Ingenious/`
 
+Les audits automatiques tournent sous Chromium avec un profil de téléphone
+Android. **Sur Android, ils couvrent donc l'essentiel du terrain** : ce qui suit
+vérifie ce qu'un navigateur piloté ne montre pas — la vraie feuille de partage,
+la vraie installation, la vraie durée, le vrai usage.
+
 ---
 
-## 1. L'export sur iPhone — à faire en premier, avant toute donnée réelle
+## 1. Installer, et exporter tout de suite
 
-**Pourquoi d'abord.** Sans serveur, l'export est le seul filet : un téléphone
-perdu sans export, c'est tout perdu. Et c'est le seul chemin que je n'ai pas pu
-éprouver sur l'appareil visé — Safari ignore `<a download>` sur une URL blob et
-ouvre le contenu dans un onglet au lieu d'enregistrer un fichier. L'application
-passe donc par la feuille de partage, vérifiée sous Chromium, jamais sous Safari.
-Si quelque chose doit être cassé, c'est là.
+L'export est le seul filet : sans serveur, un téléphone perdu sans export, c'est
+tout perdu. À faire avant de saisir la moindre donnée réelle.
 
-- [ ] Ouvrir l'adresse dans **Safari** (pas Chrome : sur iOS, seul Safari
-      installe une application sur l'écran d'accueil).
-- [ ] **Partager → Sur l'écran d'accueil.** Ouvrir ensuite l'application depuis
-      l'icône, pas depuis Safari.
+- [ ] Ouvrir l'adresse dans **Chrome**.
+- [ ] **Réglages → Installer l'application.** Chrome doit ouvrir sa fenêtre
+      d'installation. Si le bouton n'apparaît pas, passer par le menu ⋮ du
+      navigateur → *Installer l'application*.
+- [ ] Rouvrir depuis l'**icône de l'écran d'accueil**, plus depuis Chrome. La
+      barre d'adresse ne doit plus être visible.
 - [ ] Créer un compte bidon à 1 000 €, saisir deux ou trois dépenses.
-- [ ] **Réglages → Exporter.** La feuille de partage iOS doit s'ouvrir.
-- [ ] Choisir **Enregistrer dans Fichiers**. Vérifier que le fichier
-      `ingenious-AAAA-MM-JJ.json` existe vraiment dans Fichiers.
-- [ ] L'ouvrir : il doit commencer par `{"format":"ingenious.journal"`.
-- [ ] Refaire un export et **annuler** la feuille de partage. Le rappel de
-      sauvegarde doit **rester affiché** — rien n'a été enregistré.
-
-**Si la feuille de partage ne s'ouvre pas** et que le fichier s'affiche dans un
-onglet : c'est le défaut que je craignais, dites-le moi.
+- [ ] **Réglages → Exporter.** La feuille de partage Android doit s'ouvrir.
+- [ ] Enregistrer dans **Fichiers** ou **Drive**. Vérifier que
+      `ingenious-AAAA-MM-JJ.json` existe vraiment.
+- [ ] L'ouvrir : il commence par `{"format":"ingenious.journal"`.
+- [ ] Refaire un export et **annuler** le partage. Le rappel de sauvegarde doit
+      **rester affiché** — rien n'a été enregistré.
 
 ## 2. Repartir d'une sauvegarde
 
 Le cas pour lequel tout le reste existe.
 
-- [ ] Sur l'écran d'accueil de l'iPhone, supprimer l'application, puis la
-      réinstaller depuis Safari.
+- [ ] Désinstaller l'application, puis la réinstaller.
 - [ ] Au premier écran, **Restaurer une sauvegarde** → choisir le fichier.
-- [ ] L'application doit s'ouvrir directement sur vos données, **sans avoir à
-      créer de compte au préalable**.
+- [ ] Elle doit s'ouvrir directement sur vos données, **sans avoir à créer de
+      compte au préalable**.
 
 ## 3. Le code de verrouillage
 
 - [ ] **Réglages → Configurer un code.** Six chiffres.
 - [ ] Fermer complètement l'application, la rouvrir : le code est demandé.
-- [ ] Entrer un mauvais code : refusé, sans effacer quoi que ce soit.
-- [ ] Entrer le bon : les données sont là, intactes.
-- [ ] Quitter l'application trois minutes, revenir : le code est redemandé.
-- [ ] Un aller-retour de dix secondes ne doit **pas** redemander le code.
+- [ ] Mauvais code : refusé, sans rien effacer. Bon code : données intactes.
+- [ ] Quitter trois minutes, revenir : le code est redemandé.
+- [ ] Un aller-retour de dix secondes ne doit **pas** le redemander.
 
 **À savoir** : un code perdu, ce sont les données perdues. Exportez avant.
 
-## 4. La persistance sur iOS — le test long
+## 4. La persistance — le test long
 
-iOS purge les données des sites web après quelques jours sans visite. Seule
-l'installation sur l'écran d'accueil protège, et cela ne se vérifie qu'avec le
-temps.
+Un navigateur fait le ménage dans les données des sites qu'on ne visite plus, et
+il ne distingue pas un site oublié d'une application qu'on n'a pas ouverte de la
+semaine.
 
-- [ ] Réglages → la ligne **Stockage** doit dire « Installée sur l'écran
-      d'accueil : oui ».
+- [ ] Réglages → **Stockage**. Lire les deux lignes :
+      - *Persistance accordée par le navigateur* — sur Android, une application
+        installée l'obtient en général. Si c'est **oui**, le risque est faible.
+      - *Installée sur l'écran d'accueil* — doit être **oui**.
 - [ ] Ne pas ouvrir l'application pendant **deux semaines**, puis la rouvrir :
       les données doivent être là.
 
-Si elles ont disparu malgré l'installation, c'est une limite d'iOS, pas un
-défaut réparable — mais dites-le moi, cela change ce que l'application doit
-promettre.
+Si la persistance est refusée malgré l'installation, dites-le moi : cela change
+ce que l'application doit promettre.
 
 ## 5. Deux appareils
 
-- [ ] Installer aussi sur un second appareil (ou un autre navigateur).
+- [ ] Installer aussi sur un second appareil, ou dans un autre navigateur.
 - [ ] Exporter depuis le premier, restaurer sur le second.
 - [ ] Saisir une dépense **différente** sur chacun, sans les synchroniser.
 - [ ] Échanger les exports dans les deux sens.
@@ -79,8 +78,8 @@ promettre.
 
 ## 6. L'usage réel, sur quelques semaines
 
-C'est le seul test qui juge vraiment l'application : les autres vérifient qu'elle
-ne casse pas, celui-ci vérifie qu'elle sert.
+C'est le seul test qui juge vraiment l'application : les autres vérifient
+qu'elle ne casse pas, celui-ci vérifie qu'elle sert.
 
 - [ ] Saisir vos vrais comptes, vos vrais abonnements.
 - [ ] **Chaque semaine** : Réconciliation → relever le solde affiché par la
@@ -105,26 +104,34 @@ Ce qui aide à corriger : quel écran, ce que vous veniez de faire, ce que vous
 attendiez, ce que vous avez vu. Et **le fichier d'export** s'il ne contient rien
 de gênant — il contient tout ce qu'il faut pour reproduire.
 
+## Si vous ouvrez un jour depuis un iPhone
+
+L'application y fonctionne, avec deux réserves qui n'ont pas été éprouvées sur
+l'appareil : Safari ignore `<a download>` pour une URL blob — d'où le passage par
+la feuille de partage — et il n'accorde jamais la persistance, l'installation
+sur l'écran d'accueil étant alors la seule protection. Sur iOS, l'installation
+passe par le menu de partage de Safari, pas par un bouton.
+
 ---
 
 ## Vérifications automatiques
 
-Elles tournent sur une machine de développement, pas sur le téléphone.
+Sur une machine de développement, pas sur le téléphone.
 
 ```sh
 npm install
 npm run test          # 415 tests unitaires, deux secondes
 npm run lint
 npm run build
-npm run audit         # 23 audits dans un vrai navigateur, environ trois minutes
+npm run audit         # 24 audits dans un vrai navigateur, environ trois minutes
 npm run audit -- --tous   # avec les deux audits longs (volume, interruption)
 ```
 
-`npm run audit` construit puis conduit l'application : clics, saisies, fichiers
-d'import abîmés, disque qui refuse d'écrire, appareil fermé en plein chiffrement,
-trois appareils qui fusionnent leurs journaux. Le détail de chacun est dans
-`scripts/audit/README.md`.
+`npm run audit` conduit l'application construite : clics, saisies, fichiers
+d'import abîmés, disque qui refuse d'écrire, appareil fermé en plein
+chiffrement, trois appareils qui fusionnent leurs journaux. Le détail de chacun
+est dans `scripts/audit/README.md`.
 
 Ces audits ont trouvé presque tous les défauts sérieux du projet. Ils ne
-remplacent pas les sections 1 à 6 : aucun d'eux ne tourne sous Safari, ni sur un
-iPhone, ni sur plusieurs semaines.
+remplacent pas les sections 1 à 6 : aucun ne tourne sur un vrai téléphone, ni
+sur plusieurs semaines.

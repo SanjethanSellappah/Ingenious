@@ -37,6 +37,7 @@ const TOUS = [
   'reverrou',
   'reconciliation',
   'extremes',
+  'installation',
   'parcours',
   'code',
   'pin',

@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useSyncExternalStore } from 'react'
 import { aujourdhui } from '../core/clock'
 import { formaterMontant, type Cents } from '../core/money'
 import { depotCourant, ecrire, recharger } from '../app/magasin'
 import { marquerExport, rappelSauvegarde } from '../app/automatismes'
 import { useEtat } from '../app/useEtat'
+import { installationProposee, installer, sabonnerInstallation } from '../app/installation'
 import { PIN_LONGUEUR_RECOMMANDEE } from '../app/verrou'
 import type { EtatPersistance } from '../storage/persistance'
 import { Montant } from '../ui/Montant'
@@ -47,14 +48,14 @@ export function Reglages({
    *
    * Tout le filet de sécurité de cette application tient à ce bouton : sans
    * serveur, un téléphone perdu sans export, c'est tout perdu. Il doit donc
-   * marcher là où l'application est censée vivre — installée sur un iPhone —
-   * et `<a download>` y est précisément ce qui ne marche pas : Safari l'ignore
-   * pour une URL blob et ouvre le contenu dans un onglet. L'utilisateur croit
-   * avoir sauvegardé, le rappel disparaît, et il n'a aucun fichier.
+   * marcher sur un téléphone, et `<a download>` n'y est pas sûr : Safari sur iOS
+   * l'ignore pour une URL blob et ouvre le contenu dans un onglet. L'utilisateur
+   * croit avoir sauvegardé, le rappel disparaît, et il n'a aucun fichier.
    *
    * D'où l'ordre : la feuille de partage quand le navigateur sait la faire —
-   * c'est elle qui donne « Enregistrer dans Fichiers » sur iOS — et le lien de
-   * téléchargement sinon. Le rappel n'est effacé que si quelque chose a
+   * c'est elle qui donne « Enregistrer dans Fichiers » sur iOS, et le choix de
+   * l'application de destination sur Android — et le lien de téléchargement
+   * sinon. Le rappel n'est effacé que si quelque chose a
    * réellement eu lieu : un partage annulé n'est pas une sauvegarde.
    */
   async function exporter() {
@@ -239,13 +240,7 @@ export function Reglages({
           <strong>{persistance.accorde ? 'oui' : 'non'}</strong>. Installée sur l’écran d’accueil :{' '}
           <strong>{persistance.installee ? 'oui' : 'non'}</strong>.
         </p>
-        {!persistance.installee && (
-          <p className="avertissement">
-            <strong>À faire :</strong> installer l’application sur l’écran d’accueil. Sur iPhone,
-            c’est la seule protection contre l’effacement des données après quelques jours sans
-            ouverture.
-          </p>
-        )}
+        <Installation persistance={persistance} />
       </div>
 
       <div className="carte">
@@ -311,6 +306,74 @@ function telechargerFichier(nom: string, texte: string): void {
   lien.click()
   lien.remove()
   setTimeout(() => URL.revokeObjectURL(url), 0)
+}
+
+/**
+ * Installer l'application, et dire pourquoi.
+ *
+ * L'écran réclamait l'installation sans offrir aucun moyen de la faire — une
+ * impasse de plus. Chrome nous confie une invitation : on en fait un bouton.
+ *
+ * Le ton suit **ce que le navigateur a répondu**, pas une supposition sur
+ * l'appareil. Quand la persistance est accordée, l'installation reste utile mais
+ * n'est plus un filet de survie ; quand elle est refusée, elle est la seule
+ * chose qui empêche le navigateur de faire le ménage dans des données qu'il
+ * prend pour celles d'un site oublié.
+ */
+function Installation({ persistance }: { persistance: EtatPersistance }) {
+  const proposee = useSyncExternalStore(sabonnerInstallation, installationProposee, () => false)
+  const [message, setMessage] = useState<string | null>(null)
+
+  if (persistance.installee) return null
+
+  async function lancer() {
+    const resultat = await installer()
+    setMessage(
+      resultat === 'acceptee'
+        ? 'Installée. Ouvrez-la depuis son icône plutôt que depuis le navigateur.'
+        : resultat === 'refusee'
+          ? 'Installation refusée. Vous pourrez la relancer depuis le menu du navigateur.'
+          : 'Ce navigateur ne propose pas l’installation ici. Passez par son menu.',
+    )
+  }
+
+  return (
+    <>
+      <p className={persistance.accorde ? 'discret' : 'avertissement'}>
+        {persistance.accorde ? (
+          <>
+            Le navigateur s’engage à conserver les données de cet appareil. Installer l’application
+            reste préférable : elle s’ouvre en un geste, fonctionne hors ligne, et sort
+            définitivement du ménage que fait le navigateur dans les sites qu’on ne visite plus.
+          </>
+        ) : (
+          <>
+            <strong>À faire :</strong> installer l’application sur l’écran d’accueil. Le navigateur
+            n’a pas accordé la persistance : sans installation, il peut effacer ces données après
+            quelques jours sans ouverture.
+          </>
+        )}
+      </p>
+      {proposee ? (
+        <div className="actions">
+          <button type="button" onClick={() => void lancer()}>
+            Installer l’application
+          </button>
+        </div>
+      ) : (
+        <p className="discret">
+          Par le menu du navigateur : <strong>Installer l’application</strong> ou{' '}
+          <strong>Ajouter à l’écran d’accueil</strong>. Sur iPhone, c’est dans le menu de partage de
+          Safari.
+        </p>
+      )}
+      {message !== null && (
+        <p className="discret" role="status">
+          {message}
+        </p>
+      )}
+    </>
+  )
 }
 
 function ReserveResteAVivre({ reserve }: { reserve: Cents }) {

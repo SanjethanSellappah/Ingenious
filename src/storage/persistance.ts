@@ -1,11 +1,16 @@
 /**
  * Persistance du stockage.
  *
- * Safari purge IndexedDB après quelques jours sans visite. `navigator.storage.persist()`
- * n'y change rien : sur iOS, **la seule protection est l'installation sur l'écran
- * d'accueil**. L'appel reste utile sur Chrome et sur macOS, il est donc fait — mais
- * l'état obtenu est affiché tel quel plutôt que supposé, et l'export reste la vraie
- * sauvegarde.
+ * Un navigateur fait le ménage dans les données des sites qu'on ne visite plus,
+ * et il ne distingue pas un site oublié d'une application qu'on n'a pas ouverte
+ * de la semaine. `navigator.storage.persist()` demande d'être épargné ; les
+ * navigateurs y répondent différemment — Chrome l'accorde volontiers à une
+ * application installée, Safari sur iOS ne l'accorde pas du tout, et là seule
+ * l'installation sur l'écran d'accueil protège.
+ *
+ * D'où le parti pris : on demande, puis on **affiche la réponse obtenue** au
+ * lieu de deviner d'après l'appareil. L'interface s'accorde à ce que le
+ * navigateur a répondu. Et dans tous les cas, la vraie sauvegarde reste l'export.
  */
 
 export type EtatPersistance = {

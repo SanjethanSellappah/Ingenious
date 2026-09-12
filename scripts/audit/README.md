@@ -39,6 +39,7 @@ un code de sortie non nul ou sur un problème annoncé dans la sortie.
 | `reverrou` | reverrouillage après deux minutes en arrière-plan, pas avant |
 | `reconciliation` | l'écart, son absence de double comptage, une dépense saisie après l'ancre |
 | `extremes` | noms de 68 caractères, montants à sept chiffres, saisies absurdes, soldes négatifs |
+| `installation` | le bouton d'installation : proposé, consommé une fois, absent quand elle est faite |
 | `interruption` | application fermée en plein chiffrement _(long)_ |
 | `volume` | quinze ans de journal : ouverture, navigation, chiffrement _(long)_ |
 | `parcours` | le parcours complet, d'un bout à l'autre |
