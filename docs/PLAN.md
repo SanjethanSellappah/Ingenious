@@ -205,7 +205,7 @@ Ce qui ne peut pas être valorisé — un abonnement estimé sans historique, un
 échéance antérieure à tout tarif connu — est rendu à part, jamais compté zéro :
 l'écran doit le réclamer, pas faire comme si le montant était nul.
 
-### Lot 2 — Persistance et chiffrement
+### Lot 2 — Persistance et chiffrement ✅
 *Livrable : un journal qui survit au rechargement.*
 
 - `events.ts` — union discriminée de tous les types d'événements, avec validation
@@ -227,7 +227,7 @@ l'écran doit le réclamer, pas faire comme si le montant était nul.
 **Terminé quand** : on ajoute des événements, on recharge, tout est là ; on
 exporte, on vide la base, on réimporte, l'état dérivé est identique au bit près.
 
-### Lot 3 — État dérivé
+### Lot 3 — État dérivé ✅
 *Livrable : sélecteurs testés sur journal synthétique.*
 
 - Pliage du journal trié par `ts` puis `id` → comptes, mouvements, labels,
@@ -239,7 +239,7 @@ exporte, on vide la base, on réimporte, l'état dérivé est identique au bit p
 - Prix d'abonnement valide **à la date de l'échéance**, jamais le prix courant.
 - Invariant de solde §4.3 vérifié par tests, réconciliation comprise.
 
-### Lot 4 — Coquille applicative
+### Lot 4 — Coquille applicative ✅
 *Livrable : navigation et verrou.*
 
 - Cinq onglets en barre basse : Accueil · Calendrier · Ajout · Comptes · Réglages.
@@ -451,13 +451,16 @@ fiscal, vue à douze mois. Le PEA et l'or existent dès la phase 1 **en mode
 
 ---
 
-## 10. Prochaine étape
+## 10. Où en est le chantier
 
-Lots 0 et 1 livrés. La suite est le **lot 2**, persistance et chiffrement — donc
-l'export, qui est la règle §1.3 : **aucune donnée réelle ne doit être saisie
-avant que le bouton d'export existe.** C'est aussi le lot qui tranche §2.6 à
-§2.8, sur le chiffrement.
+Lots 0 à 4 livrés, 294 tests. L'application démarre, se verrouille, se remplit
+par l'onboarding, et **s'exporte** — la règle §1.3 est donc levée : le filet
+existe, les vraies données peuvent entrer.
 
-Les arbitrages §2.1 à §2.5 sont tous implémentés dans le noyau et couverts par
-les tests. Ils restent contestables tant qu'aucune donnée réelle n'existe ; après,
-ils deviennent chers à défaire.
+Les arbitrages §2.1 à §2.8 sont tous implémentés et couverts par des tests.
+Une revue de sécurité a été passée sur le lot 2, avec trois corrections
+(`docs/SECURITE.md`).
+
+La suite est le **lot 5** : les écrans, par ordre d'utilité quotidienne — accueil
+avec le reste à vivre, ajout rapide, réconciliation hebdomadaire, puis le reste.
+C'est là que le noyau déjà écrit devient visible.

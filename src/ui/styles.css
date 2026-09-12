@@ -1,16 +1,31 @@
 /*
- * Jetons de design minimaux du lot 0. Le jeu complet arrive avec la coquille
- * applicative (lot 4) ; ici, seulement de quoi ne pas livrer une page blanche
- * sans fondation : fond, encre, police système, zone sûre du téléphone.
+ * Jetons de design et styles partagés.
+ *
+ * Tout passe par des classes plutôt que par des attributs `style` : la politique
+ * de sécurité du contenu interdit le style en ligne en production, et une feuille
+ * unique reste plus simple à relire qu'une centaine d'objets dispersés.
+ *
+ * Règle d'accessibilité qui tient partout : **aucune information portée par la
+ * seule couleur**. Un montant négatif porte son signe et une icône ; une alerte
+ * porte un mot.
  */
 
 :root {
   --fond: #0f172a;
   --fond-carte: #1a243b;
+  --fond-enfonce: #131c2f;
   --encre: #e8edf7;
   --encre-faible: #9aa8c4;
   --trait: #2b3a57;
   --accent: #4ade80;
+  --accent-sombre: #2a5f48;
+  --alerte: #fb7185;
+  --attention: #fbbf24;
+
+  --rayon: 0.875rem;
+  --rayon-petit: 0.5rem;
+  --gouttiere: 1.25rem;
+  --barre-hauteur: 3.75rem;
 
   color-scheme: dark;
   font-family:
@@ -32,12 +47,261 @@ body {
   min-height: 100dvh;
   background: var(--fond);
   color: var(--encre);
-  /* Encoche et barre d'accueil : l'application tourne en plein écran une fois installée. */
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
-    env(safe-area-inset-left);
   -webkit-tap-highlight-color: transparent;
 }
 
 #root {
   min-height: 100dvh;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+/* --- Disposition ---------------------------------------------------------- */
+
+.coquille {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top);
+}
+
+.page {
+  flex: 1;
+  width: 100%;
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 1.25rem var(--gouttiere);
+  /* Hauteur de la barre, plus la zone sûre du bas : le dernier élément ne doit
+     jamais se retrouver sous la barre d'onglets. */
+  padding-bottom: calc(var(--barre-hauteur) + env(safe-area-inset-bottom) + 1.5rem);
+}
+
+.page > header {
+  margin-bottom: 1.5rem;
+}
+
+.page > header p {
+  margin: 0.25rem 0 0;
+  color: var(--encre-faible);
+}
+
+.carte {
+  background: var(--fond-carte);
+  border: 1px solid var(--trait);
+  border-radius: var(--rayon);
+  padding: 1rem 1.125rem;
+  margin-bottom: 1rem;
+}
+
+.carte h2 {
+  font-size: 1rem;
+  color: var(--encre-faible);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.discret {
+  color: var(--encre-faible);
+  font-size: 0.9375rem;
+}
+
+/* --- Barre d'onglets ------------------------------------------------------ */
+
+.onglets {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  background: var(--fond-enfonce);
+  border-top: 1px solid var(--trait);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.onglets a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  /* Cible tactile d'au moins 44 px de haut. */
+  min-height: var(--barre-hauteur);
+  color: var(--encre-faible);
+  text-decoration: none;
+  font-size: 0.6875rem;
+}
+
+.onglets a[aria-current='page'] {
+  color: var(--accent);
+  /* L'onglet actif ne se signale pas que par la couleur. */
+  font-weight: 700;
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.onglets .pictogramme {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+/* --- Montants ------------------------------------------------------------- */
+
+.montant {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.montant-sortie {
+  color: var(--alerte);
+}
+
+.montant-entree {
+  color: var(--accent);
+}
+
+.montant-principal {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+/* --- Formulaires ---------------------------------------------------------- */
+
+label {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--encre-faible);
+  margin-bottom: 0.375rem;
+}
+
+input,
+select,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+input,
+select {
+  width: 100%;
+  background: var(--fond-enfonce);
+  border: 1px solid var(--trait);
+  border-radius: var(--rayon-petit);
+  padding: 0.75rem 0.875rem;
+  min-height: 2.75rem;
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.champ {
+  margin-bottom: 1rem;
+}
+
+.saisie-montant input {
+  font-size: 1.75rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.erreur-champ {
+  color: var(--alerte);
+  font-size: 0.875rem;
+  margin: 0.375rem 0 0;
+}
+
+button {
+  background: var(--accent);
+  color: #06210f;
+  border: none;
+  border-radius: var(--rayon-petit);
+  padding: 0.75rem 1.25rem;
+  min-height: 2.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.secondaire {
+  background: transparent;
+  border: 1px solid var(--trait);
+  color: var(--encre);
+}
+
+/* --- Verrou --------------------------------------------------------------- */
+
+.verrou {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1rem;
+  max-width: 20rem;
+  margin: 0 auto;
+  padding: var(--gouttiere);
+  text-align: center;
+}
+
+.verrou input {
+  text-align: center;
+  font-size: 1.5rem;
+  letter-spacing: 0.5em;
+  text-indent: 0.5em;
+}
+
+.avertissement {
+  border: 1px solid var(--attention);
+  border-radius: var(--rayon-petit);
+  padding: 0.75rem 0.875rem;
+  font-size: 0.875rem;
+  text-align: left;
+  color: var(--encre);
+}
+
+.avertissement strong {
+  color: var(--attention);
+}
+
+/* --- Onboarding ----------------------------------------------------------- */
+
+.etapes {
+  display: flex;
+  gap: 0.375rem;
+  margin-bottom: 1.5rem;
+}
+
+.etapes span {
+  flex: 1;
+  height: 0.25rem;
+  border-radius: 999px;
+  background: var(--trait);
+}
+
+.etapes span.faite {
+  background: var(--accent);
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.actions button {
+  flex: 1;
 }
