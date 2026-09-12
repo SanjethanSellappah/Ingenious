@@ -468,10 +468,17 @@ projette, réconcilie et s'exporte.
 - `src/conformite.test.ts` est une relecture exécutable de `CONTEXTE.md` : chaque
   test porte le numéro de l'article qu'il vérifie. Une prose qui affirme « les
   virements sortent des dépenses » vieillit mal ; un test qui échoue prévient.
-- Deux revues de sécurité sont passées (`docs/SECURITE.md`), la seconde ayant
-  trouvé le défaut le plus grave du projet : activer un code après coup rendait
-  toutes les données illisibles.
-- Accessibilité mesurée sur les neuf écrans, pas supposée.
+- Trois revues de sécurité sont passées (`docs/SECURITE.md`). Les plus graves
+  défauts trouvés touchaient tous au même endroit — la promesse que les données
+  sont là : activer un code après coup rendait tout illisible, l'activation
+  interrompue perdait la moitié du journal, l'export pouvait se croire fait sans
+  qu'aucun fichier existe, une écriture refusée ne disait rien, et restaurer une
+  sauvegarde exigeait d'abord d'inventer un compte qu'on ne pourrait plus effacer.
+- Accessibilité mesurée sur vingt et un écrans, écrans de code et de démarrage à
+  froid compris, pas supposée.
+- Les audits de navigateur sont versionnés (`scripts/audit/`, `npm run audit`) :
+  c'est là que presque tous ces défauts ont été trouvés, et non dans les tests
+  unitaires. Le dispositif lui-même a été éprouvé sur une faute délibérée.
 - Le pliage de cinq mille événements prend neuf millisecondes : la marge est
   large, et un test la garde.
 

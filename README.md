@@ -23,7 +23,15 @@ npm run lint          # ESLint
 npm run build         # vérification des types puis build de production
 npm run preview       # sert le build, sous /Ingenious/
 npm run icones        # régénère les PNG de public/ depuis le script
+npm run audit         # audits de navigateur sur le build (voir scripts/audit/)
 ```
+
+Les audits de `scripts/audit/` conduisent l'application dans un vrai navigateur —
+clics, saisies, fichiers d'import malveillants, disque qui refuse d'écrire,
+appareil fermé en plein chiffrement, trois appareils qui fusionnent leurs
+journaux. Ils ne remplacent pas les tests unitaires : presque tous les défauts
+sérieux de ce projet ont été trouvés là et non dans les tests. Lancez-les sur un
+build à jour (`npm run build` d'abord).
 
 ## Architecture
 
@@ -83,11 +91,24 @@ une régularité qu'on ne peut pas tenir.
 - Le **code de verrouillage** chiffre les données de l'appareil. Il protège de
   quelqu'un qui emprunte le téléphone, pas d'un adversaire outillé qui le garde.
   Un code perdu, ce sont les données perdues, sans récupération.
+- **Une écriture refusée est annoncée**, jamais avalée : un bandeau apparaît
+  au-dessus de tous les écrans et invite à exporter avant de fermer. C'est le
+  seul accident qu'on ne peut pas constater soi-même — l'écran montre l'état en
+  mémoire, qui a l'air juste, pendant que rien n'est enregistré.
 - Sur **iOS**, `navigator.storage.persist()` n'accorde rien : seule l'installation
   sur l'écran d'accueil protège de la purge après quelques jours d'inactivité.
 - La **projection est une prédiction**. L'interface montre toujours de quoi elle
   est faite, et où sa certitude s'arrête : trait plein avant la première
   occurrence estimée, pointillé et fourchette au-delà.
+
+## Tenue à l'usage
+
+Journal de synthèse représentant un usage quotidien sur trois comptes : à quinze
+ans d'historique — 27 400 événements — l'ouverture à froid d'une base chiffrée
+prend une seconde et demie, la navigation reste sous les vingt-cinq
+millisecondes. Le chiffrement initial du journal, opération unique à l'activation
+du code, prend une dizaine de secondes ; il est reprenable, parce qu'une
+application peut être fermée pendant.
 
 ## État
 
