@@ -17,6 +17,7 @@ localement, jamais dans le build.
 npm install
 npm run dev          # serveur de développement
 npm run test         # tests unitaires (Vitest)
+npm run test:coverage # couverture du noyau
 npm run lint         # ESLint
 npm run build        # vérification des types puis build de production
 npm run preview      # sert le build, sous /Ingenious/

@@ -88,6 +88,33 @@ describe('périodicité', () => {
     ])
   })
 
+  it('personnalisé compte en mois par défaut', () => {
+    // L'unité n'est pas donnée : c'est le mois, comme pour toutes les autres
+    // fréquences. Tous les 4 mois, ici.
+    const regle: RegleRecurrence = {
+      frequence: 'personnalise',
+      intervalle: 4,
+      jour_du_mois: 10,
+      date_debut: d('2026-01-01'),
+    }
+    expect(theoriques(regle, '2026-01-01', '2027-02-28')).toEqual([
+      '2026-01-10',
+      '2026-05-10',
+      '2026-09-10',
+      '2027-01-10',
+    ])
+  })
+
+  it('personnalisé en mois respecte le mois trop court', () => {
+    const regle: RegleRecurrence = {
+      frequence: 'personnalise',
+      intervalle: 1,
+      jour_du_mois: 31,
+      date_debut: d('2026-01-01'),
+    }
+    expect(theoriques(regle, '2026-02-01', '2026-02-28')).toEqual(['2026-02-28'])
+  })
+
   it('personnalisé en jours', () => {
     const regle: RegleRecurrence = {
       frequence: 'personnalise',

@@ -8,6 +8,8 @@ import {
   depuisComposantes,
   depuisNumeroDeJour,
   dernierJourDuMois,
+  estApres,
+  estAvant,
   estBissextile,
   estDans,
   estDateCivile,
@@ -15,6 +17,8 @@ import {
   jourDeLaSemaine,
   joursDansLeMois,
   joursEntre,
+  maxDate,
+  minDate,
   moisEntre,
   nomDuJour,
   numeroDeJour,
@@ -159,6 +163,20 @@ describe('comparaison', () => {
     expect(comparer(dateCivile('2026-01-01'), dateCivile('2026-01-02'))).toBeLessThan(0)
     expect(comparer(dateCivile('2026-01-02'), dateCivile('2026-01-01'))).toBeGreaterThan(0)
     expect(comparer(dateCivile('2026-01-01'), dateCivile('2026-01-01'))).toBe(0)
+  })
+
+  it('ordonne et encadre', () => {
+    const a = dateCivile('2026-01-01')
+    const b = dateCivile('2026-06-15')
+    expect(estAvant(a, b)).toBe(true)
+    expect(estAvant(b, a)).toBe(false)
+    expect(estAvant(a, a)).toBe(false)
+    expect(estApres(b, a)).toBe(true)
+    expect(estApres(a, a)).toBe(false)
+    expect(minDate(a, b)).toBe(a)
+    expect(minDate(b, a)).toBe(a)
+    expect(maxDate(a, b)).toBe(b)
+    expect(maxDate(b, a)).toBe(b)
   })
 
   it('inclut les bornes', () => {

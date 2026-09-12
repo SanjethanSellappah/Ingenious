@@ -23,6 +23,10 @@ describe('construction', () => {
     expect(() => cents(Number.POSITIVE_INFINITY)).toThrow(/non fini/)
   })
 
+  it('refuse un entier au-delà des bornes sûres', () => {
+    expect(() => cents(Number.MAX_SAFE_INTEGER + 2)).toThrow(/hors bornes/)
+  })
+
   it('accepte les négatifs et le zéro', () => {
     expect(cents(-1250)).toBe(-1250)
     expect(cents(0)).toBe(0)
@@ -63,6 +67,11 @@ describe('arithmétique', () => {
     expect(soustraire(cents(1000), cents(1250))).toBe(-250)
     expect(negatif(cents(1250))).toBe(-1250)
     expect(valeurAbsolue(cents(-1250))).toBe(1250)
+  })
+
+  it('refuse un facteur non fini', () => {
+    expect(() => multiplier(cents(1000), Number.NaN)).toThrow(/Facteur non fini/)
+    expect(() => multiplier(cents(1000), Number.POSITIVE_INFINITY)).toThrow(/Facteur non fini/)
   })
 
   it('multiplie puis arrondit une seule fois', () => {
