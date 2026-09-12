@@ -52,10 +52,19 @@ export function Reglages({
 
   async function importer(fichier: File) {
     const depot = depotCourant()
-    if (!depot) return
+    if (!depot) {
+      // Ne jamais sortir en silence : un bouton qui ne fait rien sans rien dire
+      // est plus déroutant qu'un message d'erreur.
+      setMessage('Le journal n’est pas encore ouvert. Réessayez dans un instant.')
+      return
+    }
     setOccupe(true)
     try {
-      const resultat = await depot.importer(await fichier.text())
+      // Le contenu est lu **avant** toute remise à zéro du champ : vider
+      // `input.value` invalide la source du fichier, et la lecture reste alors
+      // en suspens pour toujours — un import qui ne finit jamais et ne dit rien.
+      const texte = await fichier.text()
+      const resultat = await depot.importer(texte)
       await recharger()
       setMessage(
         `${resultat.ajoutes} ajoutés, ${resultat.deja} déjà présents` +
@@ -65,6 +74,9 @@ export function Reglages({
       setMessage(erreur instanceof Error ? erreur.message : String(erreur))
     } finally {
       setOccupe(false)
+      // Remis à zéro maintenant que la lecture est terminée, pour que
+      // réimporter le même fichier redéclenche l'événement.
+      if (champFichier.current) champFichier.current.value = ''
     }
   }
 
@@ -106,8 +118,6 @@ export function Reglages({
             onChange={(e) => {
               const fichier = e.target.files?.[0]
               if (fichier) void importer(fichier)
-              // Remis à zéro pour que réimporter le même fichier redéclenche l'événement.
-              e.target.value = ''
             }}
           />
           <button

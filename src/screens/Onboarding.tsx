@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { aujourdhui } from '../core/clock'
 import { type Cents } from '../core/money'
 import { ecrire } from '../app/magasin'
+import { identifiant } from '../domain/identifiant'
 import { SaisieMontant } from '../ui/SaisieMontant'
 
 /**
@@ -25,7 +26,16 @@ export function Onboarding({ onTermine }: { onTermine: () => void }) {
   const [jourSalaire, setJourSalaire] = useState(30)
   const [occupe, setOccupe] = useState(false)
 
-  const compteId = 'compte-courant'
+  /**
+   * Identifiants tirés au sort, jamais figés.
+   *
+   * Un identifiant en dur ferait que deux appareils créeraient « le même »
+   * compte : à la fusion des journaux, l'un écraserait l'autre en silence, et
+   * deux soldes différents deviendraient un seul. C'est la panne la plus
+   * difficile à diagnostiquer que ce modèle puisse produire.
+   */
+  const [compteId] = useState(() => identifiant('compte'))
+  const [abonnementId] = useState(() => identifiant('rentree'))
 
   async function terminer() {
     setOccupe(true)
@@ -52,7 +62,6 @@ export function Onboarding({ onTermine }: { onTermine: () => void }) {
     ]
 
     if (montantSalaire !== null && montantSalaire > 0) {
-      const abonnementId = 'rentree-salaire'
       entrees.push({
         type: 'subscription.created',
         payload: {

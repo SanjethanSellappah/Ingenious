@@ -622,7 +622,12 @@ button.secondaire {
   font-size: 0.8125rem;
 }
 
-.ligne-label-reglage {
+/*
+ * Spécificité : `.liste li` vaut (0,1,1), une classe seule (0,1,0) perdrait.
+ * Sans le sélecteur complet, le formulaire de budget s'étalait en ligne et
+ * poussait ses boutons hors de l'écran du téléphone.
+ */
+.liste li.ligne-label-reglage {
   display: block;
 }
 

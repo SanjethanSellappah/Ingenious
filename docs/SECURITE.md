@@ -120,7 +120,46 @@ pour qu'il ne revienne pas.
 | Import hostile | Validé champ par champ avant d'entrer, événements refusés nommés un par un. |
 | Dépendances | `npm audit` : aucune vulnérabilité. |
 
-### 4.3 Accessibilité, mesurée
+### 4.3 Deux appareils créaient « le même » compte — _corrigé_
+
+L'onboarding figeait l'identifiant du compte à `compte-courant` et celui de la
+rentrée à `rentree-salaire`. Deux appareils produisaient donc deux comptes
+**portant le même identifiant** : à la fusion des journaux, l'un écrasait
+l'autre, deux soldes différents se confondaient en un seul, et rien ne le
+signalait.
+
+C'est la panne la plus difficile à diagnostiquer que cette architecture puisse
+produire — la fusion est censée être sans conflit, et elle l'est : le conflit
+venait des identifiants d'entités, pas des identifiants d'événements. Ils sont
+désormais tirés au sort comme partout ailleurs. Un test de fusion à deux
+appareils verrouille l'invariant.
+
+Trouvé en important, dans un appareil neuf, l'export d'un autre.
+
+### 4.4 Un import qui ne finissait jamais — _corrigé_
+
+Le champ fichier était remis à zéro immédiatement après le début de la lecture.
+Vider `input.value` invalide la source du fichier : la lecture restait en
+suspens indéfiniment, sans erreur, sans message. Le bouton ne faisait
+simplement rien. Le contenu est maintenant lu avant toute remise à zéro, et le
+`return` silencieux qui masquait l'autre moitié du problème dit désormais
+pourquoi il renonce.
+
+### 4.5 Un rechargement vidait l'écran — _corrigé_
+
+Toute relecture du journal remettait l'indicateur de chargement à vrai, ce qui
+démontait l'écran courant. Après un import, le message annonçant le résultat
+disparaissait donc au moment précis où il comptait. Le chargement ne vaut plus
+que pour la toute première lecture.
+
+### 4.6 Une règle CSS perdue en spécificité — _corrigé_
+
+`.ligne-label-reglage` (0,1,0) ne battait pas `.liste li` (0,1,1) : le
+formulaire de budget s'étalait en ligne et poussait ses boutons hors de l'écran
+du téléphone. Un contrôle automatisé du débordement horizontal couvre désormais
+les dix écrans.
+
+### 4.7 Accessibilité, mesurée
 
 Audit automatisé sur les neuf écrans, application remplie : 255 textes contrôlés.
 Aucun contraste sous le seuil AA, aucun champ sans étiquette, aucun bouton sans

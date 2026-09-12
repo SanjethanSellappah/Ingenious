@@ -525,3 +525,66 @@ describe('réglages', () => {
     expect(etat.reglages.reserve_cents).toBe(e(200))
   })
 })
+
+describe('fusion de deux appareils', () => {
+  /**
+   * L'invariant le plus fragile du modèle : deux appareils qui créent chacun
+   * leur compte doivent en donner deux après fusion. Un identifiant d'entité
+   * figé dans le code — « compte-courant » — les ferait devenir un seul, en
+   * silence, et deux soldes différents se confondraient. C'est la panne la plus
+   * difficile à diagnostiquer que cette architecture puisse produire.
+   */
+  it('ne confond pas deux comptes créés séparément', () => {
+    const appareilA = [
+      ev('account.created', {
+        id: 'compte-a1b2c3',
+        nom: 'Courant A',
+        type: 'courant',
+        groupe: 'bancaire',
+        mode: 'saisi',
+      }),
+      ev('account.balance_set', {
+        account_id: 'compte-a1b2c3',
+        date: '2026-09-01',
+        solde_cents: 90000,
+      }),
+    ]
+    const appareilB = [
+      ev('account.created', {
+        id: 'compte-d4e5f6',
+        nom: 'Courant B',
+        type: 'courant',
+        groupe: 'bancaire',
+        mode: 'saisi',
+      }),
+      ev('account.balance_set', {
+        account_id: 'compte-d4e5f6',
+        date: '2026-09-01',
+        solde_cents: 50000,
+      }),
+    ]
+    const fusionne = plier([...appareilA, ...appareilB])
+    expect(fusionne.comptes.size).toBe(2)
+    expect(soldeDuCompte(fusionne, 'compte-a1b2c3', d('2026-09-30'))).toBe(e(900))
+    expect(soldeDuCompte(fusionne, 'compte-d4e5f6', d('2026-09-30'))).toBe(e(500))
+    expect(patrimoine(fusionne, d('2026-09-30')).total).toBe(e(1400))
+  })
+
+  it('reste identique quel que soit l’ordre d’arrivée', () => {
+    const a = ev('account.created', {
+      id: 'compte-a1b2c3',
+      nom: 'A',
+      type: 'courant',
+      groupe: 'bancaire',
+      mode: 'saisi',
+    })
+    const b = ev('account.created', {
+      id: 'compte-d4e5f6',
+      nom: 'B',
+      type: 'courant',
+      groupe: 'bancaire',
+      mode: 'saisi',
+    })
+    expect(plier([a, b])).toEqual(plier([b, a]))
+  })
+})

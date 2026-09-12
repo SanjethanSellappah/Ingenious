@@ -18,7 +18,17 @@ export type EtatApplication = {
   journal: Evenement[]
   /** Événements que le dépôt n'a pas su relire. Affichés dans Réglages, jamais tus. */
   rejets: { index: number; raison: string }[]
+  /**
+   * Vrai seulement tant que le journal n'a **jamais** été lu.
+   *
+   * Une relecture ultérieure — après un import, par exemple — ne doit pas vider
+   * l'écran : l'écran disparaîtrait, l'état local des composants avec lui, et le
+   * message qui annonce le résultat de l'import serait perdu au moment précis où
+   * il compte.
+   */
   chargement: boolean
+  /** Vrai pendant une relecture, écran conservé. */
+  relecture: boolean
   erreur: string | null
 }
 
@@ -29,6 +39,7 @@ const initial: EtatApplication = {
   journal: [],
   rejets: [],
   chargement: true,
+  relecture: false,
   erreur: null,
 }
 
@@ -58,7 +69,7 @@ export async function brancherDepot(nouveau: Depot): Promise<void> {
 
 export async function recharger(): Promise<void> {
   if (!depot) throw new Error('Aucun dépôt branché')
-  publier({ ...instantane, chargement: true, erreur: null })
+  publier({ ...instantane, relecture: true, erreur: null })
   try {
     const { evenements, rejets } = await depot.chargerTout()
     publier({
@@ -66,12 +77,14 @@ export async function recharger(): Promise<void> {
       journal: evenements,
       rejets,
       chargement: false,
+      relecture: false,
       erreur: null,
     })
   } catch (erreur) {
     publier({
       ...instantane,
       chargement: false,
+      relecture: false,
       erreur: erreur instanceof Error ? erreur.message : String(erreur),
     })
   }
