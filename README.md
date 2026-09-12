@@ -33,6 +33,10 @@ journaux. Ils ne remplacent pas les tests unitaires : presque tous les défauts
 sérieux de ce projet ont été trouvés là et non dans les tests. Lancez-les sur un
 build à jour (`npm run build` d'abord).
 
+Ce qui reste à éprouver sur un vrai téléphone — l'export sous Safari, la
+persistance iOS, l'usage sur plusieurs semaines — est listé par ordre de risque
+dans [`docs/RECETTE.md`](docs/RECETTE.md).
+
 ## Architecture
 
 Quatre couches, du plus pur au plus branché. Une couche ne connaît jamais celle
