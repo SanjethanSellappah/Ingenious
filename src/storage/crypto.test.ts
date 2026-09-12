@@ -31,10 +31,25 @@ describe('coffre', () => {
   it('ne persiste jamais la clé de données en clair', async () => {
     const coffre = await creerCoffre('123456', TOURS)
     const serialise = JSON.stringify(coffre.meta)
-    // La clé enveloppée et le témoin sont là, la clé brute nulle part.
     expect(serialise).toContain('cle_enveloppee')
-    const brute = new Uint8Array(await crypto.subtle.exportKey('raw', coffre.cle))
-    expect(serialise).not.toContain(versBase64(brute))
+    // Ce qui est écrit sur le disque, c'est le sel, les paramètres, et un
+    // chiffré. Rien d'autre.
+    expect(Object.keys(coffre.meta).sort()).toEqual(['cle_enveloppee', 'kdf', 'version'])
+  })
+
+  it('rend une clé non exportable — même la page ne peut pas la relire', async () => {
+    const coffre = await creerCoffre('123456', TOURS)
+    expect(coffre.cle.extractable).toBe(false)
+    await expect(crypto.subtle.exportKey('raw', coffre.cle)).rejects.toThrow()
+    const rouvert = await ouvrirCoffre('123456', coffre.meta)
+    expect(rouvert.cle.extractable).toBe(false)
+  })
+
+  it('le déballage est la vérification du PIN, sans second chiffré à côté', async () => {
+    const coffre = await creerCoffre('123456', TOURS)
+    // Pas de témoin : AES-GCM authentifie, donc un mauvais PIN fait échouer le
+    // déballage au lieu de rendre une clé fausse.
+    expect(coffre.meta).not.toHaveProperty('temoin')
   })
 
   it('tire un sel différent à chaque coffre', async () => {

@@ -50,11 +50,7 @@ export type MetaCoffre = {
   kdf: ParametresKdf
   /** Clé de données, chiffrée par la clé dérivée du PIN. */
   cle_enveloppee: Scelle
-  /** Vérification rapide du PIN, sans avoir à déchiffrer le journal entier. */
-  temoin: Scelle
 }
-
-const TEMOIN_CLAIR = 'ingenious.coffre.v1'
 
 export class PinIncorrect extends Error {
   constructor() {
@@ -125,7 +121,12 @@ export async function calibrerIterations(cibleMs = CIBLE_MS): Promise<number> {
 
 export type Coffre = {
   meta: MetaCoffre
-  /** Clé de données. Ne quitte jamais la mémoire, n'est jamais persistée en clair. */
+  /**
+   * Clé de données. Jamais persistée en clair, et **non exportable** : même du
+   * code exécuté dans la page ne peut pas la relire. C'est une barrière modeste —
+   * qui exécute du code dans la page lit de toute façon les données déchiffrées —
+   * mais elle fait la différence entre lire ce qui passe et emporter la clé.
+   */
   cle: CryptoKey
 }
 
@@ -145,45 +146,50 @@ async function envelopper(cle: CryptoKey, kek: CryptoKey): Promise<Scelle> {
   return { iv_b64: versBase64(iv), donnees_b64: versBase64(new Uint8Array(enveloppe)) }
 }
 
-/** Crée un coffre neuf : sel, clé de données, enveloppe et témoin. */
+/**
+ * Déballe la clé de données.
+ *
+ * Le déballage **est** la vérification du PIN : AES-GCM authentifie, donc une
+ * clé dérivée d'un mauvais PIN fait échouer l'opération au lieu de rendre une
+ * clé fausse. Pas besoin d'un témoin scellé à côté — ce serait un second
+ * chiffré sous la même clé, pour une information qu'on a déjà.
+ */
+async function deballer(meta: MetaCoffre, kek: CryptoKey, exportable: boolean): Promise<CryptoKey> {
+  try {
+    return await crypto.subtle.unwrapKey(
+      'raw',
+      depuisBase64(meta.cle_enveloppee.donnees_b64) as BufferSource,
+      kek,
+      { name: ALGO_CHIFFREMENT, iv: depuisBase64(meta.cle_enveloppee.iv_b64) as BufferSource },
+      { name: ALGO_CHIFFREMENT, length: LONGUEUR_CLE },
+      exportable,
+      ['encrypt', 'decrypt'],
+    )
+  } catch {
+    throw new PinIncorrect()
+  }
+}
+
+/** Crée un coffre neuf : sel, clé de données, enveloppe. */
 export async function creerCoffre(pin: string, iterations?: number): Promise<Coffre> {
   const tours = iterations ?? (await calibrerIterations())
   const sel = aleatoire(OCTETS_SEL)
   const kek = await cleDerivee(pin, sel, tours)
-  const cle = await nouvelleCleDonnees()
-  const kdf: ParametresKdf = { algo: 'PBKDF2-SHA256', iterations: tours, sel_b64: versBase64(sel) }
-  return {
-    cle,
-    meta: {
-      version: 1,
-      kdf,
-      cle_enveloppee: await envelopper(cle, kek),
-      temoin: await sceller(kek, TEMOIN_CLAIR),
-    },
+  const cleExportable = await nouvelleCleDonnees()
+  const meta: MetaCoffre = {
+    version: 1,
+    kdf: { algo: 'PBKDF2-SHA256', iterations: tours, sel_b64: versBase64(sel) },
+    cle_enveloppee: await envelopper(cleExportable, kek),
   }
+  // La clé rendue est la version non exportable : celle qui a servi à
+  // l'enveloppe ne sort pas de cette fonction.
+  return { meta, cle: await deballer(meta, kek, false) }
 }
 
 /** Ouvre un coffre existant. Lève `PinIncorrect` si le PIN ne convient pas. */
 export async function ouvrirCoffre(pin: string, meta: MetaCoffre): Promise<Coffre> {
   const kek = await cleDerivee(pin, depuisBase64(meta.kdf.sel_b64), meta.kdf.iterations)
-  // Le témoin évite de déchiffrer tout le journal pour découvrir que le PIN est
-  // faux, et évite surtout de confondre « mauvais PIN » et « base corrompue ».
-  try {
-    const clair = await descelller(kek, meta.temoin)
-    if (clair !== TEMOIN_CLAIR) throw new PinIncorrect()
-  } catch {
-    throw new PinIncorrect()
-  }
-  const cle = await crypto.subtle.unwrapKey(
-    'raw',
-    depuisBase64(meta.cle_enveloppee.donnees_b64) as BufferSource,
-    kek,
-    { name: ALGO_CHIFFREMENT, iv: depuisBase64(meta.cle_enveloppee.iv_b64) as BufferSource },
-    { name: ALGO_CHIFFREMENT, length: LONGUEUR_CLE },
-    true,
-    ['encrypt', 'decrypt'],
-  )
-  return { cle, meta }
+  return { meta, cle: await deballer(meta, kek, false) }
 }
 
 /**
@@ -198,15 +204,17 @@ export async function changerPin(
   ancienPin: string,
   nouveauPin: string,
 ): Promise<MetaCoffre> {
-  await ouvrirCoffre(ancienPin, coffre.meta)
-  const sel = aleatoire(OCTETS_SEL)
   const iterations = coffre.meta.kdf.iterations
-  const kek = await cleDerivee(nouveauPin, sel, iterations)
+  const ancienneKek = await cleDerivee(ancienPin, depuisBase64(coffre.meta.kdf.sel_b64), iterations)
+  // Une copie exportable est déballée juste pour cette opération, puis oubliée :
+  // la clé que le reste de l'application détient reste non exportable.
+  const cleExportable = await deballer(coffre.meta, ancienneKek, true)
+  const sel = aleatoire(OCTETS_SEL)
+  const nouvelleKek = await cleDerivee(nouveauPin, sel, iterations)
   return {
     version: 1,
     kdf: { algo: 'PBKDF2-SHA256', iterations, sel_b64: versBase64(sel) },
-    cle_enveloppee: await envelopper(coffre.cle, kek),
-    temoin: await sceller(kek, TEMOIN_CLAIR),
+    cle_enveloppee: await envelopper(cleExportable, nouvelleKek),
   }
 }
 

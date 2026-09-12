@@ -7,9 +7,68 @@ import { defineConfig } from 'vitest/config'
 // sinon l'application installée s'ouvre hors de son propre périmètre.
 const base = '/Ingenious/'
 
+/**
+ * Politique de sécurité du contenu.
+ *
+ * L'application ne charge rien d'extérieur : ni police, ni script, ni image
+ * distante, ni appel réseau. La politique la plus stricte est donc gratuite, et
+ * c'est la seule barrière disponible contre un script injecté — GitHub Pages ne
+ * permet pas d'en-têtes HTTP, seule la balise `meta` est possible.
+ *
+ * `frame-ancestors` en est absent volontairement : cette directive est ignorée
+ * dans une balise `meta`, l'y mettre donnerait l'illusion d'une protection.
+ */
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self'",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "connect-src 'self'",
+  "worker-src 'self'",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "form-action 'none'",
+].join('; ')
+
+/**
+ * Injecte la politique, en production **et** en développement.
+ *
+ * En développement, trois directives sont desserrées parce que Vite lui-même ne
+ * peut pas les respecter : il sert ses scripts et sa feuille de style en ligne,
+ * et ouvre une liaison de rafraîchissement à chaud. Le reste — images, appels
+ * réseau, `object-src`, `base-uri`, `form-action` — reste identique, de sorte
+ * qu'une dépendance externe introduite par mégarde se voie à l'écriture du code
+ * plutôt qu'en production seulement.
+ *
+ * Le style en ligne reste donc non vérifié en développement. Les styles React
+ * (`style={{}}`) passent par le CSSOM et ne sont pas concernés par la CSP ; le
+ * seul risque réel serait un attribut `style` écrit à la main dans `index.html`,
+ * qui se verrait au premier chargement du build.
+ */
+function politiqueSecurite() {
+  return {
+    name: 'ingenious-csp',
+    transformIndexHtml(html: string, contexte: { server?: unknown }) {
+      const developpement = contexte.server !== undefined
+      const politique = developpement
+        ? CSP.replace("script-src 'self'", "script-src 'self' 'unsafe-inline' 'unsafe-eval'")
+            .replace("style-src 'self'", "style-src 'self' 'unsafe-inline'")
+            .replace("connect-src 'self'", "connect-src 'self' ws: wss:")
+        : CSP
+      return html.replace(
+        '<head>',
+        `<head>\n    <meta http-equiv="Content-Security-Policy" content="${politique}" />`,
+      )
+    },
+  }
+}
+
 export default defineConfig({
   base,
   plugins: [
+    politiqueSecurite(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',
