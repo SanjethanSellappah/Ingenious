@@ -35,6 +35,8 @@ const TOUS = [
   'panne',
   'stockage',
   'reverrou',
+  'reconciliation',
+  'extremes',
   'parcours',
   'code',
   'pin',

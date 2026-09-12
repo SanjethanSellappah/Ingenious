@@ -37,6 +37,8 @@ un code de sortie non nul ou sur un problème annoncé dans la sortie.
 | `panne` | disque qui refuse d'écrire : le bandeau, son contraste, son effacement |
 | `stockage` | IndexedDB absent, quota dépassé, `localStorage` bloqué |
 | `reverrou` | reverrouillage après deux minutes en arrière-plan, pas avant |
+| `reconciliation` | l'écart, son absence de double comptage, une dépense saisie après l'ancre |
+| `extremes` | noms de 68 caractères, montants à sept chiffres, saisies absurdes, soldes négatifs |
 | `interruption` | application fermée en plein chiffrement _(long)_ |
 | `volume` | quinze ans de journal : ouverture, navigation, chiffrement _(long)_ |
 | `parcours` | le parcours complet, d'un bout à l'autre |
