@@ -8,6 +8,7 @@ import { Calendrier } from '../screens/Calendrier'
 import { Comptes, DetailCompte } from '../screens/Comptes'
 import { Confirmer } from '../screens/Confirmer'
 import { Labels } from '../screens/Labels'
+import { Mouvement } from '../screens/Mouvement'
 import { Onboarding } from '../screens/Onboarding'
 import { Reconciliation } from '../screens/Reconciliation'
 import { Reglages } from '../screens/Reglages'
@@ -157,6 +158,7 @@ function Contenu({
         <Route path="/abonnements" element={<Abonnements />} />
         <Route path="/abonnements/:id" element={<FormulaireAbonnement />} />
         <Route path="/depenses" element={<Labels />} />
+        <Route path="/mouvements/:id" element={<Mouvement />} />
         <Route path="/reconciliation" element={<Reconciliation />} />
         <Route path="/confirmer" element={<Confirmer />} />
         <Route

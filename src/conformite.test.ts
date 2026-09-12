@@ -27,6 +27,7 @@ import {
   type TypeEvenement,
 } from './domain/events'
 import { depensesParLabel, soldeDuCompte } from './domain/selecteurs'
+import { projectionDuCompte, resteAVivreDe } from './domain/vues'
 
 const d = dateCivile
 const e = (euros: number): Cents => cents(Math.round(euros * 100))
@@ -530,5 +531,91 @@ describe('§10 pièges connus', () => {
   it('le formatage porte le signe, jamais la couleur seule', () => {
     expect(formaterMontant(e(12.5), { signeExplicite: true })).toMatch(/^\+/)
     expect(formaterMontant(e(-12.5), { signeExplicite: true })).toMatch(/^-/)
+  })
+})
+
+// §11 — Démarrage à froid ------------------------------------------------------
+
+describe('§11 l’onboarding demande le minimum utile', () => {
+  it('un compte, une rentrée et trois abonnements suffisent à tout faire marcher', () => {
+    // Ce que l'onboarding écrit, reconstitué ici : le compte, son solde, le
+    // réglage du compte courant, la rentrée estimée avec son montant de départ,
+    // et les abonnements renseignés.
+    const journal = [
+      ev('account.created', { ...courant }),
+      ev('account.balance_set', { account_id: 'c1', date: '2026-09-12', solde_cents: 150000 }),
+      ev('settings.updated', { compte_courant_id: 'c1' }),
+      ev('subscription.created', {
+        id: 'rentree-x',
+        nom: 'Salaire',
+        account_id: 'c1',
+        sens: 'rentree',
+        montant_mode: 'estime',
+        frequence: 'mensuel',
+        jour_du_mois: 30,
+        date_debut: '2026-09-12',
+      }),
+      ev('subscription.price_changed', {
+        subscription_id: 'rentree-x',
+        montant_cents: 200000,
+        valide_du: '2026-09-12',
+      }),
+      ev('subscription.created', {
+        id: 'abo-loyer',
+        nom: 'Loyer',
+        account_id: 'c1',
+        sens: 'depense',
+        montant_mode: 'fixe',
+        frequence: 'mensuel',
+        jour_du_mois: 1,
+        date_debut: '2026-09-12',
+      }),
+      ev('subscription.price_changed', {
+        subscription_id: 'abo-loyer',
+        montant_cents: 70000,
+        valide_du: '2026-09-12',
+      }),
+    ]
+    const etat = plier(journal)
+    expect(etat.comptes.size).toBe(1)
+    expect(etat.abonnements.size).toBe(2)
+
+    // La projection et le reste à vivre fonctionnent déjà : c'est le critère du
+    // contexte, et le seul qui compte au premier jour.
+    const rav = resteAVivreDe(etat, d('2026-09-12'))!
+    expect(rav.prochaineRentree).toBe('2026-09-30')
+    expect(rav.montant_cents).toBe(e(1500))
+
+    const projection = projectionDuCompte(etat, 'c1', d('2026-09-12'), 40)
+    expect(projection.composition.echeances).toBeGreaterThan(0)
+    expect(projection.serie[0]!.solde_cents).toBe(e(1500))
+  })
+
+  it('la rentrée reste projetée au-delà du premier mois', () => {
+    // Sans montant de départ, elle disparaissait dès le mois suivant puis
+    // réapparaissait : une courbe qui ment sans rien signaler.
+    const etat = plier([
+      ev('account.created', { ...courant }),
+      ev('settings.updated', { compte_courant_id: 'c1' }),
+      ev('subscription.created', {
+        id: 'rentree-y',
+        nom: 'Salaire',
+        account_id: 'c1',
+        sens: 'rentree',
+        montant_mode: 'estime',
+        frequence: 'mensuel',
+        jour_du_mois: 30,
+        date_debut: '2026-09-12',
+      }),
+      ev('subscription.price_changed', {
+        subscription_id: 'rentree-y',
+        montant_cents: 200000,
+        valide_du: '2026-09-12',
+      }),
+    ])
+    const projection = projectionDuCompte(etat, 'c1', d('2026-09-12'), 62)
+    // Deux salaires sur deux mois, aucun sans montant.
+    expect(projection.composition.echeances).toBe(2)
+    expect(projection.nonResolues).toEqual([])
   })
 })

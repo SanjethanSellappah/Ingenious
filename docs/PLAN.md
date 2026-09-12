@@ -266,6 +266,11 @@ exporte, on vide la base, on réimporte, l'état dérivé est identique au bit p
 7. **Dépenses par label** — total du mois, barres proportionnelles, budget.
 8. **Détail de compte** — relevés d'un compte `saisi`.
 9. **Réglages** — PIN, réserve, export, import, labels, état du stockage.
+10. **Correction d'un mouvement** — non prévu au contexte, et pourtant
+    indispensable : sans lui, une faute de frappe est définitive, et la seule
+    façon de la rattraper serait la réconciliation, qui la rangerait en « Non
+    catégorisé » sans jamais dire qu'il s'agissait d'une erreur de saisie.
+    Corriger n'efface rien : c'est un événement de plus.
 
 ### Lot 6 — Filet et automatismes ✅
 

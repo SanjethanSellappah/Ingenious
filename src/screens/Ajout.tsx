@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { aujourdhui } from '../core/clock'
 import { dateCivile, estDateCivile } from '../core/civilDate'
 import { negatif, type Cents } from '../core/money'
@@ -35,7 +35,13 @@ export function Ajout() {
     [etat.labels],
   )
 
-  const [sens, setSens] = useState<Sens>('sortie')
+  // Le sens peut être imposé par le lien d'arrivée : venir de « Virement »
+  // depuis l'écran Comptes doit ouvrir directement le bon formulaire.
+  const [parametres] = useSearchParams()
+  const sensInitial = parametres.get('sens')
+  const [sens, setSens] = useState<Sens>(
+    sensInitial === 'virement' || sensInitial === 'entree' ? sensInitial : 'sortie',
+  )
   const [montant, setMontant] = useState<Cents | null>(null)
   const [date, setDate] = useState(jour)
   const [compteId, setCompteId] = useState(etat.reglages.compte_courant_id ?? comptes[0]?.id ?? '')

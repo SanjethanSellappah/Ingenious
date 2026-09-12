@@ -54,7 +54,10 @@ export function Comptes() {
 
       <div className="actions">
         <Link to="/reconciliation" className="lien-bouton">
-          Réconcilier un solde
+          Réconcilier
+        </Link>
+        <Link to="/ajout?sens=virement" className="lien-bouton">
+          Virement
         </Link>
       </div>
 
@@ -199,10 +202,10 @@ export function DetailCompte() {
           <ul className="liste">
             {mouvements.map((mouvement) => (
               <li key={`${mouvement.source_id}-${mouvement.nature}`}>
-                <span>
+                <Link to={`/mouvements/${mouvement.source_id}`}>
                   {mouvement.date} · {mouvement.libelle ?? libelleParDefaut(mouvement.nature)}
                   {mouvement.nature === 'virement' && <span className="discret"> · virement</span>}
-                </span>
+                </Link>
                 <Montant valeur={mouvement.montant_cents} />
               </li>
             ))}
