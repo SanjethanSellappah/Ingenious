@@ -70,15 +70,16 @@ export function Onboarding({ onTermine }: { onTermine: () => void }) {
           actif: true,
         },
       })
-      // Sans historique, rien ne serait estimable au premier mois : ce
-      // prévisionnel est la valeur de départ que l'onboarding doit demander.
+      // Le montant annoncé est enregistré comme tarif : il sert de montant de
+      // départ tant qu'aucune occurrence n'a été confirmée. Sans lui, la
+      // rentrée disparaîtrait de la projection dès le mois suivant, puis
+      // réapparaîtrait — une courbe qui ment sans rien signaler.
       entrees.push({
-        type: 'occurrence.overridden',
+        type: 'subscription.price_changed',
         payload: {
           subscription_id: abonnementId,
-          date_theorique: `${jour.slice(0, 7)}-${String(jourSalaire).padStart(2, '0')}`,
           montant_cents: montantSalaire,
-          statut: 'previsionnel',
+          valide_du: jour,
         },
       })
     }

@@ -80,13 +80,16 @@ export function echeancesDeLaRecurrence(
     const exception = recurrence.exceptions?.find(
       (e) => e.date_theorique === occurrence.date_theorique,
     )
-    const montantFixe =
-      recurrence.montant_mode === 'fixe'
-        ? (montantValideA(recurrence.prix ?? [], occurrence.date_theorique) ?? undefined)
-        : undefined
+    // Le tarif enregistré sert de montant contractuel en mode `fixe`, et de
+    // montant de départ en mode `estime` — la valeur annoncée à la création,
+    // utilisée tant qu'aucune occurrence n'a été confirmée.
+    const tarif = montantValideA(recurrence.prix ?? [], occurrence.date_theorique) ?? undefined
+    const montantFixe = recurrence.montant_mode === 'fixe' ? tarif : undefined
+    const montantDeDepart = recurrence.montant_mode === 'estime' ? tarif : undefined
 
     const resolu = resoudreMontant({
       ...(montantFixe !== undefined ? { montantFixe } : {}),
+      ...(montantDeDepart !== undefined ? { montantDeDepart } : {}),
       ...(exception ? { exception } : {}),
       estimation,
       sens: recurrence.sens,

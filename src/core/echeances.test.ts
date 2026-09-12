@@ -163,3 +163,63 @@ describe('plusieurs récurrences', () => {
     ])
   })
 })
+
+describe('montant de départ', () => {
+  /**
+   * Le cas de l'onboarding : une récurrence estimée dont aucune occurrence n'a
+   * encore été confirmée. Sans repli, elle disparaîtrait de la projection
+   * pendant tout le premier mois puis réapparaîtrait — une courbe qui ment sans
+   * rien signaler.
+   */
+  const neuve: Recurrence = {
+    id: 'salaire-neuf',
+    libelle: 'Salaire',
+    sens: 'rentree',
+    montant_mode: 'estime',
+    regle: { frequence: 'mensuel', jour_du_mois: 30, date_debut: d('2026-09-01') },
+    prix: [{ montant_cents: e(2000), valide_du: d('2026-09-01') }],
+    realisees: [],
+  }
+
+  it('sert de repli quand aucune occurrence n’a été confirmée', () => {
+    const echeance = echeancesDeLaRecurrence(neuve, d('2026-09-01'), d('2026-09-30')).echeances[0]!
+    expect(echeance.montant_cents).toBe(e(2000))
+    // Marqué estimé : c'est une valeur annoncée, pas constatée.
+    expect(echeance.estime).toBe(true)
+    // Bornes confondues : aucune dispersion n'a été mesurée, en inventer une
+    // serait pire que de n'en afficher aucune.
+    expect(echeance.borne_basse_cents).toBe(echeance.borne_haute_cents)
+  })
+
+  it('vaut pour tous les mois, pas seulement le premier', () => {
+    const resultat = echeancesDeLaRecurrence(neuve, d('2026-09-01'), d('2026-12-31'))
+    expect(resultat.echeances).toHaveLength(4)
+    expect(resultat.nonResolues).toEqual([])
+  })
+
+  it('cède la place à l’estimation dès qu’une occurrence est confirmée', () => {
+    const avecHistorique: Recurrence = {
+      ...neuve,
+      realisees: [
+        { date_theorique: d('2026-09-30'), montant_cents: e(2140) },
+        { date_theorique: d('2026-10-30'), montant_cents: e(2080) },
+      ],
+    }
+    const echeance = echeancesDeLaRecurrence(avecHistorique, d('2026-11-01'), d('2026-11-30'))
+      .echeances[0]!
+    // Médiane de 2 140 et 2 080, pas le montant de départ de 2 000.
+    expect(echeance.montant_cents).toBe(e(2110))
+    expect(echeance.borne_basse_cents).toBe(e(2080))
+  })
+
+  it('cède la place au réalisé de l’occurrence', () => {
+    const avecReel: Recurrence = {
+      ...neuve,
+      exceptions: [{ date_theorique: d('2026-09-30'), montant_cents: e(1950), statut: 'realise' }],
+    }
+    const echeance = echeancesDeLaRecurrence(avecReel, d('2026-09-01'), d('2026-09-30'))
+      .echeances[0]!
+    expect(echeance.montant_cents).toBe(e(1950))
+    expect(echeance.estime).toBe(false)
+  })
+})

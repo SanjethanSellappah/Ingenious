@@ -1,20 +1,34 @@
 import { useRef, useState } from 'react'
+import { aujourdhui } from '../core/clock'
+import { formaterMontant, type Cents } from '../core/money'
+import { depotCourant, ecrire, recharger } from '../app/magasin'
+import { marquerExport, rappelSauvegarde } from '../app/automatismes'
 import { useEtat } from '../app/useEtat'
-import { depotCourant, recharger } from '../app/magasin'
+import { PIN_LONGUEUR_RECOMMANDEE } from '../app/verrou'
 import type { EtatPersistance } from '../storage/persistance'
+import { Montant } from '../ui/Montant'
+import { SaisieMontant } from '../ui/SaisieMontant'
 
 /**
  * Réglages.
  *
- * L'export est livré ici dès le lot 4, avant tout écran de saisie : la règle du
- * plan est qu'aucune donnée réelle ne doit être saisie avant que le filet
- * existe. L'ordre des lots s'y plie.
+ * L'export a été livré ici avant tout écran de saisie : la règle du plan est
+ * qu'aucune donnée réelle n'entre avant que le filet existe.
  */
-export function Reglages({ persistance }: { persistance: EtatPersistance }) {
-  const { journal, rejets } = useEtat()
+export function Reglages({
+  persistance,
+  aUnPin,
+  onConfigurerPin,
+}: {
+  persistance: EtatPersistance
+  aUnPin: boolean
+  onConfigurerPin: () => void
+}) {
+  const { etat, journal, rejets } = useEtat()
   const [message, setMessage] = useState<string | null>(null)
   const [occupe, setOccupe] = useState(false)
   const champFichier = useRef<HTMLInputElement>(null)
+  const rappel = rappelSauvegarde()
 
   async function exporter() {
     const depot = depotCourant()
@@ -24,9 +38,12 @@ export function Reglages({ persistance }: { persistance: EtatPersistance }) {
       const texte = await depot.exporterTexte()
       const lien = document.createElement('a')
       lien.href = URL.createObjectURL(new Blob([texte], { type: 'application/json' }))
-      lien.download = `ingenious-${new Date().toISOString().slice(0, 10)}.json`
+      // Date civile locale, pas UTC : un export fait à 00 h 30 doit porter la
+      // date d'aujourd'hui, pas celle d'hier.
+      lien.download = `ingenious-${aujourdhui()}.json`
       lien.click()
       URL.revokeObjectURL(lien.href)
+      marquerExport()
       setMessage(`${journal.length} événements exportés.`)
     } finally {
       setOccupe(false)
@@ -57,11 +74,25 @@ export function Reglages({ persistance }: { persistance: EtatPersistance }) {
         <h1>Réglages</h1>
       </header>
 
+      {rappel.du && (
+        <div className="carte a-confirmer">
+          <h2>
+            <span aria-hidden="true">💾</span> Sauvegarde
+          </h2>
+          <p>
+            {rappel.dernier === null
+              ? 'Aucun export n’a jamais été fait depuis cet appareil.'
+              : `Dernier export il y a ${rappel.jours} jours.`}{' '}
+            Sans serveur, un téléphone cassé sans export, c’est tout perdu.
+          </p>
+        </div>
+      )}
+
       <div className="carte">
         <h2>Sauvegarde</h2>
         <p className="discret">
-          Sans serveur, l’export est le seul filet. Le fichier produit est le journal lui-même, en
-          clair : relisible dans dix ans avec n’importe quel outil.
+          Le fichier produit est le journal lui-même, en clair : relisible dans dix ans avec
+          n’importe quel outil. L’import fusionne, il n’écrase jamais.
         </p>
         <div className="actions">
           <button type="button" onClick={() => void exporter()} disabled={occupe}>
@@ -95,6 +126,42 @@ export function Reglages({ persistance }: { persistance: EtatPersistance }) {
         )}
       </div>
 
+      <ReserveResteAVivre reserve={etat.reglages.reserve_cents} />
+
+      <CompteCourant
+        comptes={[...etat.comptes.values()].filter((c) => c.archived_at === undefined)}
+        courant={etat.reglages.compte_courant_id}
+      />
+
+      <div className="carte">
+        <h2>Code de verrouillage</h2>
+        {aUnPin ? (
+          <p className="discret">
+            Un code est configuré. Les données de cet appareil sont chiffrées avec lui.
+          </p>
+        ) : (
+          <>
+            <p className="discret">
+              Aucun code. Les données ne sont pas chiffrées : qui ouvre les outils de développement
+              les lit.
+            </p>
+            <p className="avertissement">
+              <strong>À savoir avant de choisir :</strong> un code perdu, ce sont les données
+              perdues, sans aucune récupération. Un code à quatre chiffres protège d’un curieux, pas
+              d’un adversaire outillé qui a le téléphone en main — {PIN_LONGUEUR_RECOMMANDEE}{' '}
+              chiffres sont recommandés.
+            </p>
+            <div className="actions">
+              <button type="button" onClick={onConfigurerPin}>
+                Configurer un code
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
+      <GestionLabels />
+
       <div className="carte">
         <h2>Stockage</h2>
         <p className="discret">
@@ -121,5 +188,197 @@ export function Reglages({ persistance }: { persistance: EtatPersistance }) {
         )}
       </div>
     </main>
+  )
+}
+
+function ReserveResteAVivre({ reserve }: { reserve: Cents }) {
+  const [valeur, setValeur] = useState<Cents | null>(null)
+  const [occupe, setOccupe] = useState(false)
+
+  async function enregistrer() {
+    if (valeur === null) return
+    setOccupe(true)
+    try {
+      await ecrire([{ type: 'settings.updated', payload: { reserve_cents: Math.abs(valeur) } }])
+    } finally {
+      setOccupe(false)
+    }
+  }
+
+  return (
+    <div className="carte">
+      <h2>Réserve</h2>
+      <p className="discret">
+        Le matelas que vous refusez d’entamer. Il est retiré du reste à vivre, pas du solde.
+      </p>
+      <p>
+        Actuellement : <Montant valeur={reserve} neutre />
+      </p>
+      <SaisieMontant libelle="Nouvelle réserve" onChange={setValeur} valeurInitiale={reserve} />
+      <div className="actions">
+        <button
+          type="button"
+          onClick={() => void enregistrer()}
+          disabled={valeur === null || occupe}
+        >
+          Enregistrer
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function CompteCourant({
+  comptes,
+  courant,
+}: {
+  comptes: readonly { id: string; nom: string }[]
+  courant: string | undefined
+}) {
+  const [occupe, setOccupe] = useState(false)
+
+  async function choisir(id: string) {
+    setOccupe(true)
+    try {
+      await ecrire([{ type: 'settings.updated', payload: { compte_courant_id: id } }])
+    } finally {
+      setOccupe(false)
+    }
+  }
+
+  return (
+    <div className="carte">
+      <h2>Compte du reste à vivre</h2>
+      <p className="discret">
+        Le reste à vivre se calcule sur un seul compte. Un solde global laisserait l’épargne masquer
+        un découvert.
+      </p>
+      <div className="champ">
+        <label htmlFor="compte-courant">Compte</label>
+        <select
+          id="compte-courant"
+          value={courant ?? ''}
+          disabled={occupe}
+          onChange={(e) => void choisir(e.target.value)}
+        >
+          <option value="">—</option>
+          {comptes.map((compte) => (
+            <option key={compte.id} value={compte.id}>
+              {compte.nom}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  )
+}
+
+function GestionLabels() {
+  const { etat } = useEtat()
+  const [enEdition, setEnEdition] = useState<string | null>(null)
+  const [budget, setBudget] = useState<Cents | null>(null)
+  const [occupe, setOccupe] = useState(false)
+  const labels = [...etat.labels.values()].filter((label) => label.archived_at === undefined)
+
+  async function poserBudget(id: string, montant: Cents | null) {
+    setOccupe(true)
+    try {
+      await ecrire([
+        {
+          type: 'label.budget_set',
+          payload: montant === null ? { id } : { id, budget_mensuel_cents: Math.abs(montant) },
+        },
+      ])
+      setEnEdition(null)
+      setBudget(null)
+    } finally {
+      setOccupe(false)
+    }
+  }
+
+  async function archiver(id: string) {
+    setOccupe(true)
+    try {
+      await ecrire([{ type: 'label.archived', payload: { id, date: aujourdhui() } }])
+    } finally {
+      setOccupe(false)
+    }
+  }
+
+  return (
+    <div className="carte">
+      <h2>Labels</h2>
+      {labels.length === 0 ? (
+        <p className="discret">Aucun label. Ils se créent à la volée depuis l’ajout rapide.</p>
+      ) : (
+        <ul className="liste">
+          {labels.map((label) => (
+            <li key={label.id} className="ligne-label-reglage">
+              <div className="ligne-label">
+                <span>
+                  {label.nom}
+                  {label.budget_mensuel_cents !== undefined && (
+                    <span className="discret">
+                      {' '}
+                      · budget {formaterMontant(label.budget_mensuel_cents)}
+                    </span>
+                  )}
+                </span>
+                <span className="actions-ligne">
+                  <button
+                    type="button"
+                    className="secondaire"
+                    disabled={occupe}
+                    onClick={() => {
+                      setEnEdition(enEdition === label.id ? null : label.id)
+                      setBudget(null)
+                    }}
+                  >
+                    Budget
+                  </button>
+                  <button
+                    type="button"
+                    className="secondaire"
+                    disabled={occupe}
+                    onClick={() => void archiver(label.id)}
+                  >
+                    Archiver
+                  </button>
+                </span>
+              </div>
+              {enEdition === label.id && (
+                <>
+                  <SaisieMontant
+                    libelle={`Budget mensuel pour « ${label.nom} »`}
+                    onChange={setBudget}
+                    {...(label.budget_mensuel_cents !== undefined
+                      ? { valeurInitiale: label.budget_mensuel_cents }
+                      : {})}
+                    autoFocus
+                  />
+                  <div className="actions">
+                    <button
+                      type="button"
+                      className="secondaire"
+                      disabled={occupe}
+                      onClick={() => void poserBudget(label.id, null)}
+                    >
+                      Retirer le budget
+                    </button>
+                    <button
+                      type="button"
+                      disabled={occupe || budget === null}
+                      onClick={() => budget !== null && void poserBudget(label.id, budget)}
+                    >
+                      Enregistrer
+                    </button>
+                  </div>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }

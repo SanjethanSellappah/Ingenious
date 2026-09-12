@@ -1,10 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { HashRouter, Route, Routes } from 'react-router-dom'
-import { Accueil, Ajout, Calendrier, Comptes } from '../screens/Placeholders'
+import { maintenant } from '../core/clock'
+import { Abonnements, FormulaireAbonnement } from '../screens/Abonnements'
+import { Accueil } from '../screens/Accueil'
+import { Ajout } from '../screens/Ajout'
+import { Calendrier } from '../screens/Calendrier'
+import { Comptes, DetailCompte } from '../screens/Comptes'
+import { Confirmer } from '../screens/Confirmer'
+import { Labels } from '../screens/Labels'
 import { Onboarding } from '../screens/Onboarding'
+import { Reconciliation } from '../screens/Reconciliation'
 import { Reglages } from '../screens/Reglages'
 import { BarreOnglets } from '../ui/BarreOnglets'
-import { demarrer, ouvrirJournal, type Demarrage } from './demarrage'
+import { enregistrerInstantanes } from './automatismes'
+import { ConfigurationPin } from './ConfigurationPin'
+import { demarrer, enregistrerCoffre, ouvrirJournal, type Demarrage } from './demarrage'
 import { useEtat } from './useEtat'
 import { Verrouillage } from './Verrouillage'
 import { DELAI_REVERROUILLAGE_MS, verrouiller, type Verrou } from './verrou'
@@ -17,6 +27,7 @@ export function App() {
   const [demarrage, setDemarrage] = useState<Demarrage | null>(null)
   const [verrou, setVerrou] = useState<Verrou | null>(null)
   const [echec, setEchec] = useState<string | null>(null)
+  const [configuration, setConfiguration] = useState(false)
 
   useEffect(() => {
     demarrer()
@@ -33,6 +44,19 @@ export function App() {
     (ouvert: Verrou) => {
       setVerrou(ouvert)
       if (demarrage) void ouvrirJournal(demarrage.base, ouvert)
+    },
+    [demarrage],
+  )
+
+  const surPinConfigure = useCallback(
+    async (nouveau: Verrou) => {
+      if (!demarrage || nouveau.meta === null) return
+      await enregistrerCoffre(demarrage.base, nouveau.meta)
+      // Le journal est relu avec le chiffreur actif : ce qui avait été écrit en
+      // clair avant la configuration est réécrit chiffré au prochain ajout.
+      await ouvrirJournal(demarrage.base, nouveau)
+      setVerrou(nouveau)
+      setConfiguration(false)
     },
     [demarrage],
   )
@@ -60,6 +84,15 @@ export function App() {
     return <Verrouillage verrou={verrou} onVerrou={setVerrou} onOuvert={surOuverture} />
   }
 
+  if (configuration) {
+    return (
+      <ConfigurationPin
+        onAnnuler={() => setConfiguration(false)}
+        onConfigure={(nouveau) => void surPinConfigure(nouveau)}
+      />
+    )
+  }
+
   return (
     <>
       <ReverrouillageAutomatique
@@ -67,15 +100,37 @@ export function App() {
         onVerrouiller={() => setVerrou(verrouiller(verrou))}
       />
       <HashRouter>
-        <Contenu persistance={demarrage.persistance} />
+        <Contenu
+          persistance={demarrage.persistance}
+          aUnPin={verrou.meta !== null}
+          onConfigurerPin={() => setConfiguration(true)}
+        />
       </HashRouter>
     </>
   )
 }
 
-function Contenu({ persistance }: { persistance: Demarrage['persistance'] }) {
+function Contenu({
+  persistance,
+  aUnPin,
+  onConfigurerPin,
+}: {
+  persistance: Demarrage['persistance']
+  aUnPin: boolean
+  onConfigurerPin: () => void
+}) {
   const { etat, chargement } = useEtat()
   const [onboardingFini, setOnboardingFini] = useState(false)
+  const instantanesFaits = useRef(false)
+
+  // Sans cron, l'instantané quotidien se déclenche à l'ouverture. La courbe de
+  // patrimoine aura donc des trous les semaines sans ouverture : on relie les
+  // points existants, on n'invente jamais de valeur.
+  useEffect(() => {
+    if (chargement || instantanesFaits.current || etat.comptes.size === 0) return
+    instantanesFaits.current = true
+    void enregistrerInstantanes(etat)
+  }, [chargement, etat])
 
   if (chargement) {
     return (
@@ -98,7 +153,18 @@ function Contenu({ persistance }: { persistance: Demarrage['persistance'] }) {
         <Route path="/calendrier" element={<Calendrier />} />
         <Route path="/ajout" element={<Ajout />} />
         <Route path="/comptes" element={<Comptes />} />
-        <Route path="/reglages" element={<Reglages persistance={persistance} />} />
+        <Route path="/comptes/:id" element={<DetailCompte />} />
+        <Route path="/abonnements" element={<Abonnements />} />
+        <Route path="/abonnements/:id" element={<FormulaireAbonnement />} />
+        <Route path="/depenses" element={<Labels />} />
+        <Route path="/reconciliation" element={<Reconciliation />} />
+        <Route path="/confirmer" element={<Confirmer />} />
+        <Route
+          path="/reglages"
+          element={
+            <Reglages persistance={persistance} aUnPin={aUnPin} onConfigurerPin={onConfigurerPin} />
+          }
+        />
         <Route path="*" element={<Accueil />} />
       </Routes>
       <BarreOnglets />
@@ -126,10 +192,10 @@ function ReverrouillageAutomatique({
     if (verrou.etat.statut !== 'ouvert') return
     function surVisibilite() {
       if (document.visibilityState === 'hidden') {
-        sortieLe.current = Date.now()
+        sortieLe.current = maintenant()
         return
       }
-      if (sortieLe.current !== null && Date.now() - sortieLe.current > DELAI_REVERROUILLAGE_MS) {
+      if (sortieLe.current !== null && maintenant() - sortieLe.current > DELAI_REVERROUILLAGE_MS) {
         onVerrouiller()
       }
       sortieLe.current = null

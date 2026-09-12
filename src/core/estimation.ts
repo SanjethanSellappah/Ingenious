@@ -98,7 +98,7 @@ export type MontantResolu = {
   /** Borne la plus défavorable au solde, et la plus favorable. Égales si le montant est certain. */
   borne_basse_cents: Cents
   borne_haute_cents: Cents
-  origine: 'realise' | 'previsionnel' | 'fixe' | 'estimation'
+  origine: 'realise' | 'previsionnel' | 'fixe' | 'estimation' | 'depart'
   estime: boolean
 }
 
@@ -107,7 +107,12 @@ export type MontantResolu = {
  *
  * 1. **Réalisé** — le montant réel est connu, il gagne toujours.
  * 2. **Prévisionnel saisi** — l'utilisateur a annoncé un montant pour cette date.
- * 3. **Estimation** — médiane de la fenêtre glissante.
+ * 3. **Montant contractuel**, pour une récurrence à montant fixe.
+ * 4. **Estimation** — médiane de la fenêtre glissante.
+ * 5. **Montant de départ** — la valeur saisie à la création, quand aucune
+ *    occurrence n'a encore été réalisée. Sans lui, une récurrence estimée
+ *    disparaîtrait de la projection pendant tout le premier mois, puis
+ *    réapparaîtrait : l'onboarding demande ce montant pour cette raison.
  *
  * Les bornes encadrent le montant central. Elles sont **signées** : la borne
  * basse est toujours la valeur la plus petite, donc la plus défavorable au
@@ -118,6 +123,8 @@ export type MontantResolu = {
 export function resoudreMontant(parametres: {
   /** Montant contractuel, pour une récurrence à montant fixe. */
   montantFixe?: Cents
+  /** Valeur de repli d'une récurrence estimée sans historique. */
+  montantDeDepart?: Cents
   /** Exception enregistrée pour cette date théorique, s'il y en a une. */
   exception?: Exception
   /** Estimation calculée sur la fenêtre, si la récurrence est à montant estimé. */
@@ -125,7 +132,7 @@ export function resoudreMontant(parametres: {
   /** Sens du mouvement : une dépense est portée en négatif. */
   sens: 'depense' | 'rentree'
 }): MontantResolu | null {
-  const { exception, estimation, montantFixe, sens } = parametres
+  const { exception, estimation, montantFixe, montantDeDepart, sens } = parametres
   const signer = (montant: Cents): Cents =>
     cents(sens === 'depense' ? -Math.abs(montant) : Math.abs(montant))
 
@@ -168,6 +175,19 @@ export function resoudreMontant(parametres: {
       borne_basse_cents: cents(Math.min(a, b)),
       borne_haute_cents: cents(Math.max(a, b)),
       origine: 'estimation',
+      estime: true,
+    }
+  }
+  if (montantDeDepart !== undefined) {
+    // Marqué estimé : c'est une valeur annoncée, pas constatée. Les bornes sont
+    // confondues faute de dispersion connue — dire « entre X et X » serait plus
+    // honnête que d'inventer une fourchette qu'on n'a pas mesurée.
+    const montant = signer(montantDeDepart)
+    return {
+      montant_cents: montant,
+      borne_basse_cents: montant,
+      borne_haute_cents: montant,
+      origine: 'depart',
       estime: true,
     }
   }
