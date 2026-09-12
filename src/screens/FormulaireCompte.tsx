@@ -78,11 +78,25 @@ export function FormulaireCompte() {
     }
   }
 
+  /**
+   * Archiver clôt aussi les abonnements rattachés.
+   *
+   * Sans cela ils resteraient « actifs » : comptés dans le coût mensuel cumulé,
+   * mais absents de toute projection, puisqu'aucune ne parcourt un compte
+   * archivé. Un abonnement qui coûte sans jamais échoir est une incohérence que
+   * personne n'irait chercher.
+   */
   async function archiver() {
     if (!existant) return
     setOccupe(true)
     try {
-      await ecrire([{ type: 'account.archived', payload: { id: existant.id, date: jour } }])
+      await ecrire([
+        { type: 'account.archived', payload: { id: existant.id, date: jour } },
+        ...abonnementsRattaches.map((abonnement) => ({
+          type: 'subscription.ended' as const,
+          payload: { subscription_id: abonnement.id, date_fin: jour },
+        })),
+      ])
       void naviguer('/comptes')
     } finally {
       setOccupe(false)
@@ -90,6 +104,12 @@ export function FormulaireCompte() {
   }
 
   const estCompteCourant = existant !== undefined && etat.reglages.compte_courant_id === existant.id
+  const abonnementsRattaches =
+    existant === undefined
+      ? []
+      : [...etat.abonnements.values()].filter(
+          (abonnement) => abonnement.account_id === existant.id && abonnement.actif,
+        )
 
   return (
     <main className="page">
@@ -166,6 +186,19 @@ export function FormulaireCompte() {
                 Le compte disparaîtra du patrimoine. Ses mouvements passés restent dans le journal :
                 archiver n’efface rien, et le patrimoine d’hier reste ce qu’il était.
               </p>
+              {abonnementsRattaches.length > 0 && (
+                <p className="avertissement">
+                  <strong>
+                    {abonnementsRattaches.length === 1
+                      ? '1 abonnement sera clôturé'
+                      : `${abonnementsRattaches.length} abonnements seront clôturés`}{' '}
+                    en même temps :
+                  </strong>{' '}
+                  {abonnementsRattaches.map((abonnement) => abonnement.nom).join(', ')}. Un
+                  abonnement sur un compte fermé continuerait à peser dans le coût mensuel sans
+                  jamais échoir.
+                </p>
+              )}
               <div className="actions">
                 <button
                   type="button"

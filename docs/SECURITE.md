@@ -184,7 +184,17 @@ a rien », ce qui est faux. La projection rend maintenant `aConfirmer`, calculé
 sur une fenêtre de quarante-cinq jours en arrière, et le champ du noyau garde
 son rôle de garde-fou à son niveau.
 
-### 4.9 Accessibilité, mesurée
+### 4.9 Un abonnement qui coûte sans jamais échoir — _corrigé_
+
+Archiver un compte laissait ses abonnements « actifs » : comptés dans le coût
+mensuel cumulé, mais absents de toute projection, puisqu'aucune ne parcourt un
+compte archivé. Vingt-cinq euros par mois qui pèsent sans jamais arriver —
+personne n'irait chercher là.
+
+L'archivage clôt désormais les abonnements rattachés, dans la même écriture, et
+l'écran de confirmation les nomme avant de le faire.
+
+### 4.10 Accessibilité, mesurée
 
 Audit automatisé sur les neuf écrans, application remplie : 255 textes contrôlés.
 Aucun contraste sous le seuil AA, aucun champ sans étiquette, aucun bouton sans
