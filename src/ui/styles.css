@@ -243,6 +243,34 @@ button.secondaire {
   color: var(--encre);
 }
 
+/* --- Panne d'écriture ----------------------------------------------------- */
+
+/*
+ * Volontairement en haut, pleine largeur, et de la couleur de l'alerte : c'est
+ * le seul message de l'application qui annonce une perte en cours. Il reste
+ * affiché tant qu'une écriture n'a pas réussi.
+ */
+.panne {
+  /* Encre sombre sur le rose d'alerte : l'inverse (blanc sur rose) tombe à 2,7
+     de contraste, sous le seuil AA. Le message qui annonce une perte de données
+     est le dernier qu'on puisse se permettre de rendre difficile à lire. */
+  background: var(--alerte);
+  color: var(--fond);
+  padding: 0.75rem var(--gouttiere);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+.panne a {
+  color: var(--fond);
+  font-weight: 700;
+}
+
+.panne .discret {
+  color: var(--fond);
+  font-size: 0.8125rem;
+}
+
 /* --- Verrou --------------------------------------------------------------- */
 
 .verrou {

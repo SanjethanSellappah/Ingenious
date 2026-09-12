@@ -402,7 +402,36 @@ Le chiffrement initial est une opération unique, à l'activation du code, et
 c'est celle dont l'interruption était dangereuse — d'où le § 5.7. L'ouverture
 quotidienne reste sous la seconde et demie à quinze ans d'usage.
 
-### 5.9 `Date` confiné, et la règle vérifiée
+### 5.9 Une écriture refusée ne disait rien — _corrigé_
+
+C'est le seul accident que l'utilisateur ne peut pas constater par lui-même.
+L'écran affiche l'état gardé en mémoire, qui a l'air juste, pendant que le disque
+n'a rien reçu : stockage plein, profil en lecture seule, navigateur qui coupe le
+stockage en navigation privée. La saisie disparaît à la fermeture, sans un mot.
+
+Dix-neuf endroits écrivent dans le journal. Aucun ne rattrapait l'échec — et
+demander à chacun de le faire ne tiendrait pas : il suffit d'un oubli pour
+qu'une saisie s'évapore. La panne est donc publiée **au seul endroit qui écrit**,
+`ecrire`, et affichée une seule fois au-dessus de tous les écrans : une panne de
+disque ne concerne pas l'écran où l'on se trouvait. L'erreur continue d'être
+relancée, de sorte qu'un écran qui sait quoi en dire le dise encore.
+
+Le bandeau donne le conseil avec le constat — « exportez maintenant, avant de
+fermer » sauve les données, « erreur d'écriture » n'aide personne — et disparaît
+dès qu'une écriture aboutit. Vérifié dans un navigateur, disque refusant toute
+écriture : le bandeau apparaît, suit d'écran en écran, mène à l'export, tient le
+contraste AA (6,63) et s'efface à la première réussite.
+
+### 5.10 Le refus de stockage parlait anglais — _corrigé_
+
+Quand le navigateur refuse IndexedDB — navigation privée, données de site
+bloquées — l'application affichait « Démarrage impossible » suivi du message de
+la bibliothèque, en anglais, et d'un lien raccourci. Devant quelqu'un dont
+l'application vient de refuser de s'ouvrir, ce n'est pas ce qu'on met en
+premier. La cause est nommée en français, avec ce qu'il y a à faire ; le détail
+technique reste, en second rideau.
+
+### 5.11 `Date` confiné, et la règle vérifiée
 
 Une date métier est une chaîne `YYYY-MM-DD` ; un `Date` promené dans le calcul
 se décale d'un jour selon le fuseau, sans lever d'exception. La règle existait

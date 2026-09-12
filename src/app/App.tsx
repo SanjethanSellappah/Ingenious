@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { HashRouter, Route, Routes } from 'react-router-dom'
+import { HashRouter, Link, Route, Routes } from 'react-router-dom'
 import { maintenant } from '../core/clock'
 import { Abonnements, FormulaireAbonnement } from '../screens/Abonnements'
 import { Accueil } from '../screens/Accueil'
@@ -87,12 +87,43 @@ export function App() {
   )
 
   if (echec !== null) {
+    // La cause la plus fréquente, et de loin : le navigateur refuse le stockage
+    // local. C'est le cas en navigation privée sur plusieurs navigateurs, et
+    // quand les données de site sont bloquées. Le message de la bibliothèque est
+    // en anglais et renvoie vers un raccourcisseur d'URL ; il est conservé en
+    // second rideau, pour qu'on puisse toujours dire ce qu'on a vu, mais ce
+    // n'est pas ce qu'on met devant les yeux de quelqu'un dont l'application
+    // vient de refuser de s'ouvrir.
+    const stockageRefuse = /indexeddb|missingapi|securityerror|quota|not supported/i.test(echec)
     return (
       <main className="page">
-        <h1>Démarrage impossible</h1>
-        <p className="erreur-champ" role="alert">
-          {echec}
-        </p>
+        <header>
+          <h1>L’application ne peut pas s’ouvrir</h1>
+        </header>
+        <div className="carte">
+          {stockageRefuse ? (
+            <>
+              <p>
+                Ce navigateur ne lui laisse pas enregistrer de données sur cet appareil. Sans cela,
+                rien ne peut être conservé — et une application qui perdrait tout à la fermeture ne
+                vous rendrait pas service.
+              </p>
+              <p className="discret">
+                C’est le cas en navigation privée sur plusieurs navigateurs, et lorsque les données
+                de site sont bloquées. Ouvrez l’application dans une fenêtre normale, ou autorisez
+                les données de site pour cette page.
+              </p>
+            </>
+          ) : (
+            <p>
+              Le journal n’a pas pu être ouvert. Vos données ne sont pas perdues : elles restent sur
+              l’appareil, et un export les reprendra toutes.
+            </p>
+          )}
+          <p className="discret">
+            Détail technique : <span role="alert">{echec}</span>
+          </p>
+        </div>
       </main>
     )
   }
@@ -175,7 +206,7 @@ function Contenu({
   onConfigurerPin: () => void
   onChangerPin: () => void
 }) {
-  const { etat, chargement } = useEtat()
+  const { etat, chargement, panneEcriture } = useEtat()
   const [onboardingFini, setOnboardingFini] = useState(false)
   const instantanesFaits = useRef(false)
 
@@ -199,11 +230,17 @@ function Contenu({
   // Aucun compte : l'application est vide et donc inutile. On demande le minimum
   // qui la rend utile, pas un inventaire.
   if (etat.comptes.size === 0 && !onboardingFini) {
-    return <Onboarding onTermine={() => setOnboardingFini(true)} />
+    return (
+      <>
+        <PanneEcriture message={panneEcriture} />
+        <Onboarding onTermine={() => setOnboardingFini(true)} />
+      </>
+    )
   }
 
   return (
     <div className="coquille">
+      <PanneEcriture message={panneEcriture} />
       <Routes>
         <Route path="/" element={<Accueil />} />
         <Route path="/calendrier" element={<Calendrier />} />
@@ -269,4 +306,28 @@ function ReverrouillageAutomatique({
   }, [verrou.etat.statut, onVerrouiller])
 
   return null
+}
+
+/**
+ * Bandeau d'écriture impossible.
+ *
+ * Au-dessus de tous les écrans, parce qu'un disque qui n'accepte plus rien ne
+ * concerne pas l'écran où l'on se trouvait. C'est le seul accident que
+ * l'utilisateur ne peut pas voir : l'application affiche l'état en mémoire, qui
+ * a l'air juste, pendant que rien n'est enregistré — et tout disparaîtra à la
+ * fermeture.
+ *
+ * Le conseil est donné avec le constat. « Erreur d'écriture » n'aide personne ;
+ * « exportez maintenant, avant de fermer » sauve les données.
+ */
+function PanneEcriture({ message }: { message: string | null }) {
+  if (message === null) return null
+  return (
+    <div className="panne" role="alert">
+      <strong>La dernière saisie n’a pas pu être enregistrée.</strong> Ce qui est à l’écran n’est
+      qu’en mémoire et disparaîtra à la fermeture. Le stockage de l’appareil est peut-être plein, ou
+      bloqué par le navigateur. <Link to="/reglages">Exportez maintenant</Link>, avant de fermer.
+      <span className="discret"> ({message})</span>
+    </div>
+  )
 }
