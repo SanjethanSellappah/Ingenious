@@ -464,7 +464,29 @@ En les rassemblant, deux défauts du dispositif lui-même :
 Le dispositif a été éprouvé sur une faute délibérée — une palette au contraste
 de 1,6 — et il l'a signalée écran par écran.
 
-### 5.13 `Date` confiné, et la règle vérifiée
+### 5.13 Deux appareils enregistraient deux fois la même journée — _corrigé_
+
+Le contexte demande « un instantané par compte et par jour ». La contrainte était
+tenue à l'écriture, contre l'état que l'appareil connaît — c'est-à-dire contre
+rien du tout dès qu'il y en a deux. Deux téléphones ouverts le même jour, chacun
+hors ligne, écrivent chacun le sien sans rien savoir de l'autre ; à la fusion,
+les deux survivent, avec des valeurs différentes puisque chacun a calculé sur son
+propre journal partiel. Ce n'est pas un cas tordu, c'est le fonctionnement normal
+du multi-appareils.
+
+Les instantanés ne sont pas encore lus — la courbe historique de patrimoine
+n'existe pas — mais ils sont le type d'événement **le plus nombreux** du journal,
+celui qu'on exporte, fusionne et déchiffre à chaque ouverture. Le regroupement se
+fait désormais au pliage, en un passage et une table : le dernier l'emporte, à
+l'identique sur tous les appareils puisque le journal est trié par instant puis
+par identifiant.
+
+Le jeu d'essai de performance ne contenait aucun instantané : il mesurait une
+forme de journal qui n'existe pas, et aurait laissé passer un regroupement en
+carré de leur nombre. Il en contient maintenant, doublons compris — 8 969
+événements dont 3 360 instantanés, repliés en 9 ms.
+
+### 5.14 `Date` confiné, et la règle vérifiée
 
 Une date métier est une chaîne `YYYY-MM-DD` ; un `Date` promené dans le calcul
 se décale d'un jour selon le fuseau, sans lever d'exception. La règle existait

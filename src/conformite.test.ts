@@ -194,6 +194,29 @@ describe('§3.6 les instantanés sont quotidiens et par compte', () => {
       { account_id: 'c1', date: '2026-09-11', valeur_cents: 120000 },
     ])
   })
+
+  /**
+   * « Quotidiens et par compte » est une contrainte sur l'état, pas un vœu.
+   *
+   * Elle ne peut pas être tenue à l'écriture : deux appareils ouverts le même
+   * jour, chacun hors ligne, écrivent chacun le sien sans rien savoir de
+   * l'autre. C'est le fonctionnement normal du multi-appareils, pas un cas
+   * tordu. Le pliage doit donc les ramener à un, et de façon identique partout —
+   * le journal est trié par instant puis par identifiant, le dernier l'emporte.
+   */
+  it('n’en garde qu’un par compte et par jour, même écrits par deux appareils', () => {
+    const etat = plier([
+      ev('snapshot.recorded', { account_id: 'c1', date: '2026-09-11', valeur_cents: 120000 }),
+      ev('snapshot.recorded', { account_id: 'c1', date: '2026-09-11', valeur_cents: 125000 }),
+      ev('snapshot.recorded', { account_id: 'c2', date: '2026-09-11', valeur_cents: 500 }),
+      ev('snapshot.recorded', { account_id: 'c1', date: '2026-09-12', valeur_cents: 130000 }),
+    ])
+    expect(etat.instantanes).toEqual([
+      { account_id: 'c1', date: '2026-09-11', valeur_cents: 125000 },
+      { account_id: 'c2', date: '2026-09-11', valeur_cents: 500 },
+      { account_id: 'c1', date: '2026-09-12', valeur_cents: 130000 },
+    ])
+  })
 })
 
 // §4 — Modèle de données ------------------------------------------------------

@@ -101,6 +101,26 @@ function journalRealiste(annees: number): Evenement[] {
             montant_cents: 20000,
           })
         }
+        // Les instantanés sont le type d'événement le plus nombreux d'un vrai
+        // journal : un par compte et par jour d'ouverture. Les omettre du
+        // plafond, c'est mesurer une forme de journal qui n'existe pas — et
+        // laisser passer un regroupement en carré de leur nombre.
+        for (const compte of ['c1', 'c2']) {
+          ajouter('snapshot.recorded', {
+            account_id: compte,
+            date: dateAnnee,
+            valeur_cents: 100000 + (numero % 9000),
+          })
+        }
+        // Deux appareils ouverts le même jour : le doublon que le pliage doit
+        // ramener à un.
+        if (numero % 11 === 0) {
+          ajouter('snapshot.recorded', {
+            account_id: 'c1',
+            date: dateAnnee,
+            valeur_cents: 111111,
+          })
+        }
       }
     }
   }
@@ -114,6 +134,14 @@ describe('journal de cinq ans', () => {
     // Cinq ans à trois mouvements par jour : bien au-delà d'un usage réel, ce
     // qui est le but — un plafond ne vaut que s'il est éprouvé au-dessus.
     expect(journal.length).toBeGreaterThan(5_000)
+  })
+
+  it('ne garde qu’un instantané par compte et par jour', () => {
+    const etat = plier(journal)
+    const cles = etat.instantanes.map((i) => `${i.account_id}@${i.date}`)
+    expect(new Set(cles).size).toBe(cles.length)
+    // Deux comptes, 28 jours, 12 mois, 5 ans : le compte est exact, pas approché.
+    expect(cles.length).toBe(2 * 28 * 12 * 5)
   })
 
   it('se replie en moins de 400 ms', () => {

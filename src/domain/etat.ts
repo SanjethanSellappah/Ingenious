@@ -115,6 +115,11 @@ export type Etat = {
   reglages: Reglages
 }
 
+/** Clé d'un instantané : le couple (compte, jour). Voir `plier`. */
+export function cleInstantane(account_id: string, date: CivilDate): string {
+  return `${account_id}@${date}`
+}
+
 /** Clé d'une exception : le couple (récurrence, date théorique), et rien d'autre. */
 export function cleException(subscription_id: string, date_theorique: CivilDate): string {
   return `${subscription_id}@${date_theorique}`
@@ -408,11 +413,31 @@ function regleDepuisPayloadPartiel(p: Payload): Partial<RegleRecurrence> {
   return partiel
 }
 
-/** Replie tout le journal. Le tri est refait ici : l'appelant n'a pas à y penser. */
+/**
+ * Replie tout le journal. Le tri est refait ici : l'appelant n'a pas à y penser.
+ *
+ * Les instantanés sont ramenés à **un par compte et par jour**. Cette contrainte
+ * ne peut pas être tenue à l'écriture : deux appareils ouverts le même jour,
+ * chacun hors ligne, écrivent chacun le sien sans rien savoir de l'autre. C'est
+ * le fonctionnement normal du multi-appareils, pas un cas tordu — et sans ce
+ * regroupement, une même journée porterait deux valeurs différentes du même
+ * compte. Le journal étant trié par instant puis par identifiant, le dernier
+ * l'emporte, à l'identique sur tous les appareils.
+ */
 export function plier(evenements: readonly Evenement[]): Etat {
   const etat = etatVide()
   for (const evenement of trierJournal(evenements)) appliquer(etat, evenement)
   etat.releves.sort((a, b) => (a.date !== b.date ? (a.date < b.date ? -1 : 1) : a.ts - b.ts))
-  etat.instantanes.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+
+  // Un seul passage et une table : parcourir le tableau à chaque instantané
+  // coûterait le carré de sa taille, et c'est le type d'événement le plus
+  // nombreux du journal — un par compte et par jour d'ouverture.
+  const parJour = new Map<string, Instantane>()
+  for (const instantane of etat.instantanes) {
+    parJour.set(cleInstantane(instantane.account_id, instantane.date), instantane)
+  }
+  etat.instantanes = [...parJour.values()].sort((a, b) =>
+    a.date !== b.date ? (a.date < b.date ? -1 : 1) : a.account_id < b.account_id ? -1 : 1,
+  )
   return etat
 }
