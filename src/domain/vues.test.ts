@@ -3,6 +3,7 @@ import { dateCivile } from '../core/civilDate'
 import { cents, type Cents } from '../core/money'
 import { plier } from './etat'
 import { validerEvenement, type Evenement, type TypeEvenement } from './events'
+import { compteCourantEffectif } from './selecteurs'
 import {
   echeancesDuCompte,
   occurrencesAConfirmer,
@@ -250,5 +251,56 @@ describe('occurrences à confirmer', () => {
     ])
     const aConfirmer = occurrencesAConfirmer(etat, AUJOURDHUI)
     expect(aConfirmer.map((x) => `${x.date} ${x.libelle}`)).not.toContain('2026-09-01 Loyer')
+  })
+})
+
+/**
+ * Après une restauration, le journal importé peut ne pas porter le réglage qui
+ * désigne le compte du reste à vivre. Deux des cinq onglets en dépendent.
+ */
+describe('compte courant effectif', () => {
+  const compte = (id: string, groupe: 'bancaire' | 'investissement') =>
+    ev('account.created', { id, nom: id, type: 'courant', groupe, mode: 'saisi' })
+
+  it('respecte le réglage explicite, même avec plusieurs comptes', () => {
+    const etat = plier([
+      compte('c1', 'bancaire'),
+      compte('c2', 'bancaire'),
+      ev('settings.updated', { compte_courant_id: 'c2' }),
+    ])
+    expect(compteCourantEffectif(etat)).toBe('c2')
+  })
+
+  it('désigne le seul compte bancaire quand le réglage manque', () => {
+    const etat = plier([compte('c1', 'bancaire'), compte('pea', 'investissement')])
+    expect(compteCourantEffectif(etat)).toBe('c1')
+  })
+
+  it('ne devine pas entre deux candidats : l’écran doit poser la question', () => {
+    const etat = plier([compte('c1', 'bancaire'), compte('c2', 'bancaire')])
+    expect(compteCourantEffectif(etat)).toBeUndefined()
+  })
+
+  it('ignore un compte archivé dans le décompte des candidats', () => {
+    const etat = plier([
+      compte('c1', 'bancaire'),
+      compte('c2', 'bancaire'),
+      ev('account.archived', { id: 'c2', date: '2026-01-01' }),
+    ])
+    expect(compteCourantEffectif(etat)).toBe('c1')
+  })
+
+  it('ne retient pas un compte désigné qui n’existe pas dans ce journal', () => {
+    // Import partiel : le réglage a suivi, le compte non.
+    const etat = plier([
+      compte('c1', 'bancaire'),
+      ev('settings.updated', { compte_courant_id: 'absent' }),
+    ])
+    expect(compteCourantEffectif(etat)).toBe('c1')
+  })
+
+  it('ne désigne rien quand il n’y a aucun compte bancaire', () => {
+    const etat = plier([compte('pea', 'investissement')])
+    expect(compteCourantEffectif(etat)).toBeUndefined()
   })
 })

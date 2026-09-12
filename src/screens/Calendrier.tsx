@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   ajouterJours,
   ajouterMois,
@@ -12,6 +13,7 @@ import { aujourdhui } from '../core/clock'
 import { nomDuFerie } from '../core/holidaysFR'
 import { cents, formaterMontant } from '../core/money'
 import { useEtat } from '../app/useEtat'
+import { compteCourantEffectif } from '../domain/selecteurs'
 import { echeancesDuCompte, projectionDuCompte } from '../domain/vues'
 import { CourbeSolde } from '../ui/CourbeSolde'
 import { Montant } from '../ui/Montant'
@@ -41,7 +43,7 @@ const NOMS_MOIS = [
 export function Calendrier() {
   const { etat } = useEtat()
   const jour = aujourdhui()
-  const compteId = etat.reglages.compte_courant_id
+  const compteId = compteCourantEffectif(etat)
   const [decalage, setDecalage] = useState(0)
 
   const moisAffiche = useMemo(() => ajouterMois(dateCivile(jour), decalage), [jour, decalage])
@@ -157,7 +159,11 @@ export function Calendrier() {
 
       {compteId === undefined && (
         <div className="carte">
-          <p className="discret">Aucun compte courant désigné.</p>
+          <p>Aucun compte courant n’est désigné.</p>
+          <p className="discret">
+            Le calendrier suit les échéances d’un compte. Choisissez-le dans{' '}
+            <Link to="/reglages">Réglages</Link>.
+          </p>
         </div>
       )}
     </main>

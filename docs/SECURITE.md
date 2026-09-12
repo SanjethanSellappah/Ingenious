@@ -349,7 +349,60 @@ abonnements, taille du journal), réimport du même fichier sans effet, et le ca
 qui compte : A corrige un mouvement pendant que B le supprime. Même verdict des
 deux côtés, et sur un troisième appareil qui importe dans l'ordre inverse.
 
-### 5.7 `Date` confiné, et la règle vérifiée
+### 5.7 Activer un code pouvait perdre la moitié du journal — _corrigé_
+
+La correction du § 4.1 réglait le cas où l'on oubliait de rechiffrer. Restait
+celui, plus vicieux, de l'activation **interrompue**.
+
+Rechiffrer quinze ans de journal prend une dizaine de secondes ici, davantage
+sur un téléphone. Pendant ce temps l'application peut être fermée, la mémoire
+réclamée par le système, la batterie s'éteindre. Or l'ordre était : rechiffrer
+d'abord, enregistrer le coffre ensuite — « pour que la base reste lisible sans
+code si le rechiffrement échoue ». Ce raisonnement vaut pour un échec, pas pour
+une interruption : les enregistrements déjà scellés l'étaient avec une clé de
+données que le coffre n'avait pas encore rangée. Elle n'existait plus nulle
+part. **Perte définitive**, proportionnelle au temps écoulé avant la coupure.
+
+Pire : relancer l'opération l'aggravait. `rechiffrerJournal` relisait tout avec
+le chiffreur d'origine, qui laisse passer n'importe quoi — les enregistrements
+déjà scellés étaient scellés **une seconde fois**, et la reprise détruisait
+exactement ce qu'elle venait sauver.
+
+Trois corrections :
+
+1. **Le coffre est enregistré d'abord.** La clé de données survit à toute
+   interruption ; ce qui est scellé reste lisible.
+2. **Le rechiffrement saute ce qui est déjà au format d'arrivée**, le format
+   étant auto-descriptif. L'opération devient idempotente, donc reprenable.
+3. **L'ouverture termine le travail commencé.** La question se lit sur la forme
+   des enregistrements, sans rien déchiffrer — la poser à chaque ouverture ne
+   coûte rien, alors que déchiffrer tout le journal pour y répondre doublerait
+   le temps d'ouverture tous les jours.
+
+Un enregistrement illisible n'est plus jamais réécrit à l'aveugle : il est nommé
+et laissé en place. Le sceller une seconde fois l'aurait enfermé dans une
+enveloppe valide, et la corruption serait devenue indétectable.
+
+L'état partiel est prouvé par un test qui échoue sans la correction. Le chemin
+complet est vérifié dans un navigateur : 27 000 événements, application fermée
+en plein chiffrement, réouverture — solde identique, aucun enregistrement
+illisible, base homogène.
+
+### 5.8 Ce que l'application supporte, mesuré
+
+Journal de synthèse représentant un usage quotidien : trois comptes, un
+instantané par compte et par jour, deux dépenses par jour.
+
+| Journal | Ouverture à froid, chiffré | Chiffrement initial | Navigation |
+| --- | --- | --- | --- |
+| 9 100 événements (5 ans) | 1,0 s | 2,4 s | 13–24 ms |
+| 27 400 événements (15 ans) | 1,5 s | 10,9 s | — |
+
+Le chiffrement initial est une opération unique, à l'activation du code, et
+c'est celle dont l'interruption était dangereuse — d'où le § 5.7. L'ouverture
+quotidienne reste sous la seconde et demie à quinze ans d'usage.
+
+### 5.9 `Date` confiné, et la règle vérifiée
 
 Une date métier est une chaîne `YYYY-MM-DD` ; un `Date` promené dans le calcul
 se décale d'un jour selon le fuseau, sans lever d'exception. La règle existait

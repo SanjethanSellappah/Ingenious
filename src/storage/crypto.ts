@@ -252,6 +252,18 @@ export type Chiffreur = {
   dechiffrer: (valeur: unknown) => Promise<unknown>
 }
 
+/**
+ * Reconnaît un enregistrement scellé à sa forme.
+ *
+ * Le format est auto-descriptif, et c'est ce qui rend un rechiffrement
+ * interrompu réparable : on sait toujours dire, enregistrement par
+ * enregistrement, s'il a déjà été traité.
+ */
+export function estScelle(valeur: unknown): boolean {
+  const scelle = valeur as Scelle | null
+  return typeof scelle?.iv_b64 === 'string' && typeof scelle?.donnees_b64 === 'string'
+}
+
 export function chiffreurIdentite(): Chiffreur {
   return {
     actif: false,
@@ -265,11 +277,10 @@ export function chiffreurCoffre(coffre: Coffre): Chiffreur {
     actif: true,
     chiffrer: async (valeur) => sceller(coffre.cle, JSON.stringify(valeur)),
     dechiffrer: async (valeur) => {
-      const scelle = valeur as Scelle
-      if (typeof scelle?.iv_b64 !== 'string' || typeof scelle?.donnees_b64 !== 'string') {
+      if (!estScelle(valeur)) {
         throw new Error('Enregistrement non chiffré dans une base chiffrée')
       }
-      return JSON.parse(await descelller(coffre.cle, scelle)) as unknown
+      return JSON.parse(await descelller(coffre.cle, valeur as Scelle)) as unknown
     },
   }
 }

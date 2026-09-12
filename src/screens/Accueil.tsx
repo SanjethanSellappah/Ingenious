@@ -3,6 +3,7 @@ import { aujourdhui } from '../core/clock'
 import { formaterMontant } from '../core/money'
 import { rappelSauvegarde } from '../app/automatismes'
 import { useEtat } from '../app/useEtat'
+import { compteCourantEffectif } from '../domain/selecteurs'
 import {
   occurrencesAConfirmer,
   prochainesEcheances,
@@ -23,7 +24,7 @@ import { Montant } from '../ui/Montant'
 export function Accueil() {
   const { etat } = useEtat()
   const jour = aujourdhui()
-  const compteId = etat.reglages.compte_courant_id
+  const compteId = compteCourantEffectif(etat)
   const rav = resteAVivreDe(etat, jour)
 
   if (compteId === undefined || !etat.comptes.has(compteId)) {

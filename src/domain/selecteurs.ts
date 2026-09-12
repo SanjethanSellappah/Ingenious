@@ -237,6 +237,30 @@ export function realiseesDe(etat: Etat, subscription_id: string): OccurrenceReal
     }))
 }
 
+/**
+ * Le compte du reste à vivre, tel qu'il faut le lire.
+ *
+ * Le réglage explicite prime toujours : le reste à vivre est une promesse sur un
+ * compte précis, et deviner à la place de l'utilisateur donnerait un chiffre
+ * juste sur le mauvais compte.
+ *
+ * Mais quand il n'existe qu'un seul compte bancaire ouvert, il n'y a rien à
+ * deviner. Demander de choisir entre une seule chose n'est pas une question,
+ * c'est un obstacle — et il tombe précisément après une restauration, quand
+ * l'événement de réglage manque au journal importé.
+ *
+ * Au-delà d'un candidat, on se tait et on laisse l'écran poser la question.
+ */
+export function compteCourantEffectif(etat: Etat): string | undefined {
+  const designe = etat.reglages.compte_courant_id
+  if (designe !== undefined && etat.comptes.has(designe)) return designe
+
+  const candidats = [...etat.comptes.values()].filter(
+    (compte) => compte.archived_at === undefined && compte.groupe === 'bancaire',
+  )
+  return candidats.length === 1 ? candidats[0]!.id : undefined
+}
+
 /** Cherche un label par son nom normalisé — la garantie d'unicité. */
 export function labelParNom(etat: Etat, nom: string): Label | null {
   const recherche = normaliserNom(nom)

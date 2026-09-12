@@ -1,8 +1,9 @@
 import 'fake-indexeddb/auto'
 import { describe, expect, it } from 'vitest'
 import { chiffreurCoffre, chiffreurIdentite, creerCoffre } from './crypto'
-import { ouvrirBase } from './db'
-import { ouvrirDepot, rechiffrerJournal } from './repository'
+import { CLE_COFFRE, ouvrirBase } from './db'
+import { compterHorsFormat, ouvrirDepot, rechiffrerJournal } from './repository'
+import { ouvrirJournal } from '../app/demarrage'
 
 const TOURS = 1000
 let compteur = 0
@@ -81,10 +82,14 @@ describe('configuration d’un PIN après coup', () => {
 
     const coffre = await creerCoffre('123456', TOURS)
     const resultat = await rechiffrerJournal(base, identite, chiffreurCoffre(coffre))
-    // Le chiffreur identité laisse tout passer : c'est la validation qui rejette
-    // ensuite. Ici, les deux enregistrements sont réécrits, et le corrompu sera
-    // signalé à la lecture plutôt que supprimé.
-    expect(resultat.rechiffres).toBe(2)
+    // Le corrompu a déjà la forme d'un scellé : on tente de le lire avec la clé
+    // d'arrivée, et son illisibilité est signalée par son identifiant. Le
+    // sceller une seconde fois l'aurait enfermé dans une enveloppe valide —
+    // la corruption serait devenue indétectable.
+    expect(resultat.rechiffres).toBe(1)
+    expect(resultat.rejets).toHaveLength(1)
+    expect(resultat.rejets[0]!.raison).toContain('corrompu')
+    // Rien n'est supprimé : un enregistrement illisible reste là où il est.
     expect(await base.events.count()).toBe(2)
   })
 
@@ -102,5 +107,100 @@ describe('configuration d’un PIN après coup', () => {
     const resultat = await rechiffrerJournal(base, identite, chiffreurCoffre(coffre), 100)
     expect(resultat.rechiffres).toBe(450)
     expect(resultat.rejets).toEqual([])
+  })
+})
+
+/**
+ * L'activation du code peut être interrompue.
+ *
+ * Rechiffrer quinze ans de journal prend une dizaine de secondes sur cette
+ * machine, davantage sur un téléphone. Pendant ce temps, l'application peut être
+ * fermée, le système peut réclamer la mémoire, la batterie peut lâcher. Ce qui
+ * se passe alors décide si l'utilisateur retrouve ses données ou non.
+ */
+describe('activation du code interrompue', () => {
+  const journalDe = async (base: ReturnType<typeof ouvrirBase>, n: number) => {
+    const depot = await ouvrirDepot({ base, chiffreur: chiffreurIdentite() })
+    for (let i = 0; i < n; i++) await depot.ajouter('account.created', { ...compte, id: `c${i}` })
+  }
+
+  it('ne perd rien quand le coffre est enregistré avant le rechiffrement', async () => {
+    const base = ouvrirBase(`interrompu-${compteur++}`)
+    await journalDe(base, 6)
+    const coffre = await creerCoffre('123456', TOURS)
+
+    // Le coffre est posé d'abord : la clé de données survit à l'interruption.
+    await base.meta.put({ cle: 'coffre', valeur: { sel_b64: 'x' } })
+    // Puis le rechiffrement s'arrête au milieu.
+    const tous = await base.events.toArray()
+    const moitie = tous.slice(0, 3)
+    for (const enregistrement of moitie) {
+      await base.events.put({
+        id: enregistrement.id,
+        donnees: await chiffreurCoffre(coffre).chiffrer(
+          await chiffreurIdentite().dechiffrer(enregistrement.donnees),
+        ),
+      })
+    }
+
+    // Reprise : le rechiffrement doit finir le travail, pas le refuser.
+    const reprise = await rechiffrerJournal(base, chiffreurIdentite(), chiffreurCoffre(coffre))
+    expect(reprise.rejets).toEqual([])
+
+    const depot = await ouvrirDepot({ base, chiffreur: chiffreurCoffre(coffre) })
+    const { evenements, rejets } = await depot.chargerTout()
+    expect(rejets).toEqual([])
+    expect(evenements).toHaveLength(6)
+  })
+})
+
+/**
+ * Le scénario complet, par le vrai code de démarrage.
+ *
+ * L'utilisateur active un code sur un journal existant, et l'application est
+ * fermée au milieu du rechiffrement. Ce qu'il doit retrouver à la réouverture :
+ * tout, sans intervention.
+ */
+describe('reprise au démarrage', () => {
+  it('termine un chiffrement interrompu à l’ouverture suivante', async () => {
+    const base = ouvrirBase(`reprise-${compteur++}`)
+    const depot = await ouvrirDepot({ base, chiffreur: chiffreurIdentite() })
+    for (let i = 0; i < 8; i++) await depot.ajouter('account.created', { ...compte, id: `c${i}` })
+
+    const coffre = await creerCoffre('123456', TOURS)
+    const chiffreur = chiffreurCoffre(coffre)
+
+    // Interruption : le coffre est posé, la moitié du journal est scellée.
+    await base.meta.put({ cle: CLE_COFFRE, valeur: { marqueur: 'coffre' } })
+    for (const enregistrement of (await base.events.toArray()).slice(0, 4)) {
+      await base.events.put({
+        id: enregistrement.id,
+        donnees: await chiffreur.chiffrer(enregistrement.donnees),
+      })
+    }
+    expect(await compterHorsFormat(base, chiffreur)).toBe(4)
+
+    // Réouverture : c'est `ouvrirJournal` qui doit terminer le travail.
+    await ouvrirJournal(base, { chiffreur, meta: null, etat: { statut: 'ouvert' } } as never)
+    expect(await compterHorsFormat(base, chiffreur)).toBe(0)
+
+    const relu = await ouvrirDepot({ base, chiffreur })
+    const { evenements, rejets } = await relu.chargerTout()
+    expect(rejets).toEqual([])
+    expect(evenements).toHaveLength(8)
+  })
+
+  it('n’entreprend rien quand le journal est déjà homogène', async () => {
+    const base = ouvrirBase(`reprise-${compteur++}`)
+    const coffre = await creerCoffre('123456', TOURS)
+    const chiffreur = chiffreurCoffre(coffre)
+    const depot = await ouvrirDepot({ base, chiffreur })
+    await depot.ajouter('account.created', { ...compte })
+
+    expect(await compterHorsFormat(base, chiffreur)).toBe(0)
+    await ouvrirJournal(base, { chiffreur, meta: null, etat: { statut: 'ouvert' } } as never)
+    const { evenements, rejets } = await (await ouvrirDepot({ base, chiffreur })).chargerTout()
+    expect(rejets).toEqual([])
+    expect(evenements).toHaveLength(1)
   })
 })

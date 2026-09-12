@@ -22,7 +22,7 @@ import {
   type TypeEvenement,
 } from '../domain/events'
 import { objet, chaine, entier, tableau, ErreurValidation } from '../domain/valider'
-import { chiffreurIdentite, type Chiffreur } from './crypto'
+import { chiffreurIdentite, estScelle, type Chiffreur } from './crypto'
 import { CLE_APPAREIL, ouvrirBase, type BaseIngenious } from './db'
 
 export type Depot = {
@@ -166,7 +166,32 @@ export async function ouvrirDepot(
 }
 
 /**
+ * Compte les enregistrements qui ne sont pas au format d'un chiffreur.
+ *
+ * Sans aucune opération cryptographique : seule la **forme** est regardée. C'est
+ * ce qui permet de poser la question à chaque ouverture — déchiffrer tout le
+ * journal pour savoir s'il faut le rechiffrer doublerait le temps d'ouverture,
+ * tous les jours, pour un cas qui ne se produit presque jamais.
+ */
+export async function compterHorsFormat(
+  base: BaseIngenious,
+  chiffreur: Chiffreur,
+): Promise<number> {
+  let hors = 0
+  for (const enregistrement of await base.events.toArray()) {
+    if (estScelle(enregistrement.donnees) !== chiffreur.actif) hors += 1
+  }
+  return hors
+}
+
+/**
  * Rechiffre tout le journal d'un chiffreur vers un autre.
+ *
+ * **Reprenable, et c'est indispensable.** Rechiffrer quinze ans de journal prend
+ * une dizaine de secondes sur une machine de bureau, davantage sur un téléphone ;
+ * l'application peut être fermée entre-temps. L'opération saute donc ce qui est
+ * déjà au format d'arrivée, de sorte que la relancer termine le travail au lieu
+ * de l'abîmer.
  *
  * Indispensable au moment où l'utilisateur configure un code après avoir déjà
  * saisi des données : sans cette opération, les enregistrements écrits en clair
@@ -183,15 +208,38 @@ export async function rechiffrerJournal(
   ancien: Chiffreur,
   nouveau: Chiffreur,
   tailleLot = 200,
-): Promise<{ rechiffres: number; rejets: { index: number; raison: string }[] }> {
+): Promise<{
+  rechiffres: number
+  deja: number
+  rejets: { index: number; raison: string }[]
+}> {
   const enregistrements = await base.events.toArray()
   const rejets: { index: number; raison: string }[] = []
   let rechiffres = 0
+  let deja = 0
 
   for (let debut = 0; debut < enregistrements.length; debut += tailleLot) {
     const lot = enregistrements.slice(debut, debut + tailleLot)
     const aEcrire: { id: string; donnees: unknown }[] = []
     for (const [rang, enregistrement] of lot.entries()) {
+      // Déjà au format d'arrivée : on n'y touche pas. Sans ce test, reprendre un
+      // rechiffrement interrompu chiffrerait une seconde fois ce qui l'était
+      // déjà — la reprise détruirait précisément ce qu'elle vient sauver.
+      if (estScelle(enregistrement.donnees) === nouveau.actif) {
+        try {
+          await nouveau.dechiffrer(enregistrement.donnees)
+          deja += 1
+          continue
+        } catch (erreur) {
+          // Bon format, mauvaise clé : `ancien` ne le lira pas davantage. On le
+          // signale plutôt que de le réécrire à partir de rien.
+          rejets.push({
+            index: debut + rang,
+            raison: `${enregistrement.id} : ${erreur instanceof Error ? erreur.message : String(erreur)}`,
+          })
+          continue
+        }
+      }
       try {
         const clair = await ancien.dechiffrer(enregistrement.donnees)
         aEcrire.push({ id: enregistrement.id, donnees: await nouveau.chiffrer(clair) })
@@ -208,7 +256,7 @@ export async function rechiffrerJournal(
     }
   }
 
-  return { rechiffres, rejets }
+  return { rechiffres, deja, rejets }
 }
 
 /**
