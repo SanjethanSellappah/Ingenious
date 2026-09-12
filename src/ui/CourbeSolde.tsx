@@ -71,68 +71,81 @@ export function CourbeSolde({
 
   return (
     <figure className="courbe">
-      <svg
-        viewBox={`0 0 ${largeur} ${hauteur}`}
-        preserveAspectRatio="none"
-        role="img"
-        aria-labelledby={`${id}-titre`}
-        onPointerMove={(evenement) => {
-          const boite = evenement.currentTarget.getBoundingClientRect()
-          const rang = Math.round(
-            ((evenement.clientX - boite.left) / boite.width) * (serie.length - 1),
-          )
-          setRangSurvol(Math.min(Math.max(rang, 0), serie.length - 1))
-        }}
-        onPointerLeave={() => setRangSurvol(null)}
-      >
-        <title id={`${id}-titre`}>
-          Solde projeté entre {formaterMontant(min)} et {formaterMontant(max)} sur {serie.length}{' '}
-          jours. Point bas le {projection.pointBas.date} à{' '}
-          {formaterMontant(projection.pointBas.solde_cents)}.
-        </title>
+      <div className="courbe-trace">
+        <svg
+          viewBox={`0 0 ${largeur} ${hauteur}`}
+          preserveAspectRatio="none"
+          role="img"
+          aria-labelledby={`${id}-titre`}
+          onPointerMove={(evenement) => {
+            const boite = evenement.currentTarget.getBoundingClientRect()
+            const rang = Math.round(
+              ((evenement.clientX - boite.left) / boite.width) * (serie.length - 1),
+            )
+            setRangSurvol(Math.min(Math.max(rang, 0), serie.length - 1))
+          }}
+          onPointerLeave={() => setRangSurvol(null)}
+        >
+          <title id={`${id}-titre`}>
+            Solde projeté entre {formaterMontant(min)} et {formaterMontant(max)} sur {serie.length}{' '}
+            jours. Point bas le {projection.pointBas.date} à{' '}
+            {formaterMontant(projection.pointBas.solde_cents)}.
+          </title>
 
-        {/* Le zéro n'est tracé que s'il est dans le champ : une ligne hors sujet
+          {/* Le zéro n'est tracé que s'il est dans le champ : une ligne hors sujet
             prend de la place et fait croire à une limite qui n'existe pas. */}
-        {zeroY !== null && (
-          <line x1={0} x2={largeur} y1={zeroY} y2={zeroY} className="courbe-zero" />
-        )}
+          {zeroY !== null && (
+            <line x1={0} x2={largeur} y1={zeroY} y2={zeroY} className="courbe-zero" />
+          )}
 
-        {bande !== '' && <path d={bande} className="courbe-bande" />}
-        <path d={chemin(certain, 0)} className="courbe-trait" />
-        {incertain.length > 1 && (
-          <path d={chemin(incertain, debutIncertain)} className="courbe-trait courbe-pointille" />
-        )}
+          {bande !== '' && <path d={bande} className="courbe-bande" />}
+          <path d={chemin(certain, 0)} className="courbe-trait" />
+          {incertain.length > 1 && (
+            <path d={chemin(incertain, debutIncertain)} className="courbe-trait courbe-pointille" />
+          )}
 
-        {rangPointBas !== -1 && (
-          <circle
-            cx={x(rangPointBas)}
-            cy={y(serie[rangPointBas]!.solde_cents)}
-            r={4}
-            className="courbe-point-bas"
-          />
-        )}
-        {survol !== null && rangSurvol !== null && (
-          <>
-            <line
-              x1={x(rangSurvol)}
-              x2={x(rangSurvol)}
-              y1={0}
-              y2={hauteur}
-              className="courbe-curseur"
-            />
+          {rangPointBas !== -1 && (
             <circle
-              cx={x(rangSurvol)}
-              cy={y(survol.solde_cents)}
+              cx={x(rangPointBas)}
+              cy={y(serie[rangPointBas]!.solde_cents)}
               r={4}
-              className="courbe-curseur-point"
+              className="courbe-point-bas"
             />
-          </>
-        )}
-      </svg>
+          )}
+          {survol !== null && rangSurvol !== null && (
+            <>
+              <line
+                x1={x(rangSurvol)}
+                x2={x(rangSurvol)}
+                y1={0}
+                y2={hauteur}
+                className="courbe-curseur"
+              />
+              <circle
+                cx={x(rangSurvol)}
+                cy={y(survol.solde_cents)}
+                r={4}
+                className="courbe-curseur-point"
+              />
+            </>
+          )}
+        </svg>
+        <span className="courbe-axe courbe-axe-haut" aria-hidden="true">
+          {formaterMontant(max)}
+        </span>
+        <span className="courbe-axe courbe-axe-bas" aria-hidden="true">
+          {formaterMontant(min)}
+        </span>
+      </div>
 
-      <p className="courbe-echelle" aria-hidden="true">
-        <span>{formaterMontant(max)}</span>
-        <span>{formaterMontant(min)}</span>
+      {/* Les dates sous l'axe horizontal, les montants sur l'axe vertical.
+          Rendus côte à côte, le plus haut et le plus bas solde se lisaient comme
+          un début et une fin de période : on croyait voir le solde d'aujourd'hui
+          à droite et la prévision à gauche, soit exactement l'inverse du tracé. */}
+      <p className="courbe-dates" aria-hidden="true">
+        <span>{jourCourt(serie[0]!.date)}</span>
+        <span className="discret">aujourd’hui → dans {serie.length - 1} jours</span>
+        <span>{jourCourt(serie[serie.length - 1]!.date)}</span>
       </p>
 
       <figcaption>
@@ -174,6 +187,9 @@ function calculer(serie: readonly PointDeSerie[], hauteur: number) {
   if (serie.length < 2) return null
   const largeur = 320
   const marge = 6
+  // Une gouttière horizontale : sans elle le trait est coupé net par le bord du
+  // cadre, et le dernier point paraît sortir du graphique.
+  const gouttiere = 4
 
   let min = Number.POSITIVE_INFINITY
   let max = Number.NEGATIVE_INFINITY
@@ -192,7 +208,7 @@ function calculer(serie: readonly PointDeSerie[], hauteur: number) {
   return {
     // L'abscisse se déduit du rang, jamais d'une recherche dans la série : un
     // `indexOf` par point rendrait le tracé quadratique.
-    x: (rang: number) => (rang / (serie.length - 1)) * largeur,
+    x: (rang: number) => gouttiere + (rang / (serie.length - 1)) * (largeur - gouttiere * 2),
     y: (valeur: number) => hauteur - marge - ((valeur - min) / (max - min)) * (hauteur - marge * 2),
     largeur,
     min: min as Cents,

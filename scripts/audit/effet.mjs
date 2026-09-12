@@ -36,7 +36,8 @@ await page.fill('#nom-abo', 'Loyer')
 await page.fill('input[inputmode="decimal"]', '700')
 await page.fill('#jour-mois', '5')
 await page.fill('#debut', '2026-08-05')
-await page.selectOption('#label-abo', { label: 'Logement' })
+// Le label existant se choisit d'un appui ; c'est le geste réel.
+await page.click('.champ:has(#label-abo) button:has-text("Logement")')
 await page.click('button:has-text("Enregistrer")')
 await page.waitForSelector('h1:has-text("Abonnements")')
 

@@ -38,6 +38,7 @@ const TOUS = [
   'reconciliation',
   'extremes',
   'installation',
+  'signales',
   'parcours',
   'code',
   'pin',

@@ -11,6 +11,8 @@ import type { Abonnement } from '../domain/etat'
 import { Montant } from '../ui/Montant'
 import { SaisieMontant } from '../ui/SaisieMontant'
 import { identifiant } from '../domain/identifiant'
+import { resoudreLabel, type ChoixLabel as Choix } from '../domain/labels'
+import { ChoixLabel } from '../ui/ChoixLabel'
 
 /**
  * Liste des abonnements.
@@ -46,8 +48,13 @@ export function Abonnements() {
 
       {abonnements.map((abonnement) => {
         const changement = dernierChangement(abonnement.prix)
+        // Un tarif unique n'est pas un changement, c'est le tarif. Sans ce test,
+        // tout abonnement fraîchement créé s'annonçait « tarif modifié » — un
+        // avertissement pour une modification qui n'a jamais eu lieu.
         const recent =
-          changement !== null && changement.valide_du > ajouterJours(dateCivile(jour), -62)
+          abonnement.prix.length > 1 &&
+          changement !== null &&
+          changement.valide_du > ajouterJours(dateCivile(jour), -62)
         return (
           <div className="carte" key={abonnement.id}>
             <h2>
@@ -166,7 +173,10 @@ export function FormulaireAbonnement() {
   const [regleMoisCourt, setRegleMoisCourt] = useState<
     NonNullable<RegleRecurrence['regle_mois_court']>
   >(existant?.regle.regle_mois_court ?? 'dernier_jour')
-  const [labelId, setLabelId] = useState(existant?.label_id ?? '')
+  const [label, setLabel] = useState<Choix>({
+    labelId: existant?.label_id ?? '',
+    nouveauNom: '',
+  })
   const [dateDebut, setDateDebut] = useState<CivilDate>(existant?.regle.date_debut ?? jour)
   const [occupe, setOccupe] = useState(false)
 
@@ -195,7 +205,11 @@ export function FormulaireAbonnement() {
     setOccupe(true)
     try {
       const abonnementId = existant?.id ?? identifiant('abonnement')
+      // Le label est résolu d'abord : s'il faut le créer, son événement doit
+      // précéder l'abonnement qui s'y rattache.
+      const { labelId: labelRetenu, entrees: creationLabel } = resoudreLabel(etat, label)
       const entrees: Parameters<typeof ecrire>[0][number][] = [
+        ...creationLabel,
         {
           type: existant ? 'subscription.updated' : 'subscription.created',
           payload: {
@@ -211,7 +225,7 @@ export function FormulaireAbonnement() {
             regle_mois_court: regleMoisCourt,
             date_debut: dateDebut,
             actif: true,
-            ...(labelId !== '' ? { label_id: labelId } : {}),
+            ...(labelRetenu !== '' ? { label_id: labelRetenu } : {}),
           },
         },
       ]
@@ -316,23 +330,13 @@ export function FormulaireAbonnement() {
       </div>
 
       {sens === 'depense' && (
-        <div className="champ">
-          <label htmlFor="label-abo">Label</label>
-          <select id="label-abo" value={labelId} onChange={(e) => setLabelId(e.target.value)}>
-            <option value="">Non catégorisé</option>
-            {[...etat.labels.values()]
-              .filter((label) => label.archived_at === undefined)
-              .map((label) => (
-                <option key={label.id} value={label.id}>
-                  {label.nom}
-                </option>
-              ))}
-          </select>
+        <>
+          <ChoixLabel etat={etat} valeur={label} onChange={setLabel} id="label-abo" />
           <p className="discret">
             Une fois l’échéance confirmée, son montant compte dans ce poste de dépense — sans avoir
             à la saisir une seconde fois.
           </p>
-        </div>
+        </>
       )}
 
       <div className="champ">

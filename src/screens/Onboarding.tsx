@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { composantes, depuisComposantes, joursDansLeMois, type CivilDate } from '../core/civilDate'
 import { aujourdhui } from '../core/clock'
 import { type Cents } from '../core/money'
 import { depotCourant, ecrire, recharger } from '../app/magasin'
@@ -59,6 +60,7 @@ export function Onboarding({ onTermine }: { onTermine: () => void }) {
    */
   const [compteId] = useState(() => identifiant('compte'))
   const [abonnementId] = useState(() => identifiant('rentree'))
+  const dateCivileDuJour = aujourdhui()
 
   const champFichier = useRef<HTMLInputElement>(null)
   const [messageImport, setMessageImport] = useState<string | null>(null)
@@ -112,9 +114,43 @@ export function Onboarding({ onTermine }: { onTermine: () => void }) {
     onTermine()
   }
 
+  /**
+   * Ancre une récurrence déclarée à l'installation, dans le mois en cours.
+   *
+   * Ce que l'utilisateur décrit ici n'est pas une dépense qui commence
+   * aujourd'hui : c'est un loyer qu'il paie depuis des années. Dater le début
+   * du jour de l'installation fait sauter l'échéance du mois quand son quantième
+   * est déjà passé — installez l'application le 12 en déclarant un loyer le 5, et
+   * votre plus grosse charge est invisible pendant tout le premier mois. C'est
+   * exactement ce qu'on croit voir comme « l'abonnement n'est pas pris en
+   * compte ».
+   *
+   * Elle est donc ancrée au quantième du mois courant. Le solde n'est pas compté
+   * deux fois pour autant : le relevé saisi à l'étape 1 est daté d'aujourd'hui,
+   * et seuls les mouvements postérieurs à ce relevé entrent dans le calcul.
+   */
+  function debutDansLeMois(jourDuMois: number): CivilDate {
+    const { annee, mois } = composantes(dateCivileDuJour)
+    return depuisComposantes(annee, mois, Math.min(jourDuMois, joursDansLeMois(annee, mois)))
+  }
+
+  /**
+   * Depuis quand le tarif déclaré vaut.
+   *
+   * Le premier jour du mois, et non la date de la première échéance : un
+   * abonnement dont le quantième n'est pas encore arrivé n'aurait alors aucun
+   * tarif *aujourd'hui*, et sortirait du coût mensuel cumulé jusqu'à ce que la
+   * date tombe. Le premier du mois précède à coup sûr et la date du jour et
+   * toute échéance de ce mois.
+   */
+  function debutDuMois(): CivilDate {
+    const { annee, mois } = composantes(dateCivileDuJour)
+    return depuisComposantes(annee, mois, 1)
+  }
+
   async function terminer() {
     setOccupe(true)
-    const jour = aujourdhui()
+    const jour = dateCivileDuJour
     const entrees: {
       type: Parameters<typeof ecrire>[0][number]['type']
       payload: Record<string, unknown>
@@ -150,7 +186,7 @@ export function Onboarding({ onTermine }: { onTermine: () => void }) {
           frequence: 'mensuel',
           jour_du_mois: jourSalaire,
           regle_weekend: 'jour_ouvre_precedent',
-          date_debut: jour,
+          date_debut: debutDansLeMois(jourSalaire),
           actif: true,
         },
       })
@@ -163,7 +199,7 @@ export function Onboarding({ onTermine }: { onTermine: () => void }) {
         payload: {
           subscription_id: abonnementId,
           montant_cents: montantSalaire,
-          valide_du: jour,
+          valide_du: debutDuMois(),
         },
       })
     }
@@ -185,7 +221,7 @@ export function Onboarding({ onTermine }: { onTermine: () => void }) {
           frequence: 'mensuel',
           jour_du_mois: abonnement.jour,
           regle_weekend: 'exact',
-          date_debut: jour,
+          date_debut: debutDansLeMois(abonnement.jour),
           actif: true,
         },
       })
@@ -194,7 +230,7 @@ export function Onboarding({ onTermine }: { onTermine: () => void }) {
         payload: {
           subscription_id: id,
           montant_cents: Math.abs(abonnement.montant),
-          valide_du: jour,
+          valide_du: debutDuMois(),
         },
       })
     }

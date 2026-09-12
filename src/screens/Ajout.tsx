@@ -5,9 +5,9 @@ import { dateCivile, estDateCivile } from '../core/civilDate'
 import { negatif, type Cents } from '../core/money'
 import { ecrire } from '../app/magasin'
 import { useEtat } from '../app/useEtat'
-import { normaliserNom } from '../domain/etat'
 import { identifiant } from '../domain/identifiant'
-import { labelParNom } from '../domain/selecteurs'
+import { resoudreLabel, type ChoixLabel as Choix } from '../domain/labels'
+import { ChoixLabel } from '../ui/ChoixLabel'
 import { SaisieMontant } from '../ui/SaisieMontant'
 
 type Sens = 'sortie' | 'entree' | 'virement'
@@ -30,10 +30,6 @@ export function Ajout() {
     () => [...etat.comptes.values()].filter((compte) => compte.archived_at === undefined),
     [etat.comptes],
   )
-  const labels = useMemo(
-    () => [...etat.labels.values()].filter((label) => label.archived_at === undefined),
-    [etat.labels],
-  )
 
   // Le sens peut être imposé par le lien d'arrivée : venir de « Virement »
   // depuis l'écran Comptes doit ouvrir directement le bon formulaire.
@@ -48,8 +44,7 @@ export function Ajout() {
   const [versCompteId, setVersCompteId] = useState(
     comptes.find((compte) => compte.id !== compteId)?.id ?? '',
   )
-  const [labelId, setLabelId] = useState('')
-  const [nouveauLabel, setNouveauLabel] = useState('')
+  const [label, setLabel] = useState<Choix>({ labelId: '', nouveauNom: '' })
   const [note, setNote] = useState('')
   const [occupe, setOccupe] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -65,24 +60,12 @@ export function Ajout() {
     setOccupe(true)
     setErreur(null)
     try {
-      const entrees: Parameters<typeof ecrire>[0][number][] = []
-      let labelRetenu = labelId
-
-      // Un label saisi à la volée est créé s'il n'existe pas déjà sous une autre
-      // casse : « courses », « Courses » et « COURSES » sont le même label.
-      const nom = nouveauLabel.trim()
-      if (sens !== 'virement' && nom !== '') {
-        const existant = labelParNom(etat, nom)
-        if (existant) {
-          labelRetenu = existant.id
-        } else {
-          labelRetenu = identifiant(`label-${normaliserNom(nom).replace(/[^a-z0-9]+/g, '-')}`)
-          entrees.push({
-            type: 'label.created',
-            payload: { id: labelRetenu, nom, couleur: '#4ade80' },
-          })
-        }
-      }
+      // Un virement n'a pas de poste de dépense : déplacer de l'argent n'est pas
+      // le dépenser.
+      const { labelId: labelRetenu, entrees } =
+        sens === 'virement'
+          ? { labelId: '', entrees: [] as Parameters<typeof ecrire>[0][number][] }
+          : resoudreLabel(etat, label)
 
       if (sens === 'virement') {
         entrees.push({
@@ -174,40 +157,7 @@ export function Ajout() {
         </div>
       )}
 
-      {sens !== 'virement' && (
-        <>
-          {labels.length > 0 && (
-            <div className="raccourcis" role="group" aria-label="Labels fréquents">
-              {labels.slice(0, 8).map((label) => (
-                <button
-                  key={label.id}
-                  type="button"
-                  aria-pressed={labelId === label.id}
-                  onClick={() => {
-                    setLabelId(labelId === label.id ? '' : label.id)
-                    setNouveauLabel('')
-                  }}
-                >
-                  {label.nom}
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="champ">
-            <label htmlFor="nouveau-label">Nouveau label</label>
-            <input
-              id="nouveau-label"
-              value={nouveauLabel}
-              autoComplete="off"
-              placeholder="laisser vide pour ne pas catégoriser"
-              onChange={(e) => {
-                setNouveauLabel(e.target.value)
-                if (e.target.value !== '') setLabelId('')
-              }}
-            />
-          </div>
-        </>
-      )}
+      {sens !== 'virement' && <ChoixLabel etat={etat} valeur={label} onChange={setLabel} />}
 
       <div className="champ">
         <label htmlFor="date">Date</label>
