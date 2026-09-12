@@ -26,7 +26,7 @@ import {
   type Evenement,
   type TypeEvenement,
 } from './domain/events'
-import { depensesParLabel, soldeDuCompte } from './domain/selecteurs'
+import { depensesParLabel, patrimoine, soldeDuCompte } from './domain/selecteurs'
 import { projectionDuCompte, resteAVivreDe } from './domain/vues'
 
 const d = dateCivile
@@ -617,5 +617,62 @@ describe('§11 l’onboarding demande le minimum utile', () => {
     // Deux salaires sur deux mois, aucun sans montant.
     expect(projection.composition.echeances).toBe(2)
     expect(projection.nonResolues).toEqual([])
+  })
+})
+
+// §9 — Périmètre de la phase 1 ------------------------------------------------
+
+describe('§9 le PEA et l’or existent dès la phase 1, en mode saisi', () => {
+  const journal = [
+    ev('account.created', { ...courant }),
+    ev('account.created', {
+      id: 'livret',
+      nom: 'Livret A',
+      type: 'livret',
+      groupe: 'bancaire',
+      mode: 'saisi',
+    }),
+    ev('account.created', {
+      id: 'pea',
+      nom: 'PEA',
+      type: 'pea',
+      groupe: 'investissement',
+      mode: 'saisi',
+    }),
+    ev('account.created', {
+      id: 'or',
+      nom: 'Or',
+      type: 'or',
+      groupe: 'investissement',
+      mode: 'saisi',
+    }),
+    ev('account.balance_set', { account_id: 'c1', date: '2026-09-01', solde_cents: 120000 }),
+    ev('account.balance_set', { account_id: 'livret', date: '2026-09-01', solde_cents: 850000 }),
+    ev('account.balance_set', { account_id: 'pea', date: '2026-09-01', solde_cents: 1500000 }),
+    ev('account.balance_set', { account_id: 'or', date: '2026-09-01', solde_cents: 300000 }),
+  ]
+
+  it('accepte les quatre types en mode saisi', () => {
+    const etat = plier(journal)
+    expect([...etat.comptes.values()].every((compte) => compte.mode === 'saisi')).toBe(true)
+    expect(etat.comptes.size).toBe(4)
+  })
+
+  it('sépare ce qu’on peut dépenser de ce qu’on possède', () => {
+    const { total, parGroupe } = patrimoine(plier(journal), d('2026-09-30'))
+    expect(total).toBe(e(27700))
+    expect(parGroupe.get('bancaire')).toBe(e(9700))
+    expect(parGroupe.get('investissement')).toBe(e(18000))
+  })
+
+  it('un compte clôturé s’archive et sort du patrimoine, sans effacer son passé', () => {
+    const avecArchive = plier([
+      ...journal,
+      ev('account.archived', { id: 'pea', date: '2026-09-15' }),
+    ])
+    expect(patrimoine(avecArchive, d('2026-09-30')).total).toBe(e(12700))
+    // Le compte existe toujours, et son solde reste calculable.
+    expect(avecArchive.comptes.get('pea')?.archived_at).toBe('2026-09-15')
+    expect(soldeDuCompte(avecArchive, 'pea', d('2026-09-30'))).toBe(e(15000))
   })
 })

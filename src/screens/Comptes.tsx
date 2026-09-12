@@ -71,6 +71,12 @@ export function Comptes() {
       )}
 
       <div className="actions">
+        <Link to="/comptes/nouveau" className="lien-bouton">
+          Nouveau compte
+        </Link>
+      </div>
+
+      <div className="actions">
         <Link to="/abonnements" className="lien-bouton">
           Abonnements
         </Link>
@@ -171,7 +177,10 @@ export function DetailCompte() {
 
       <div className="actions">
         <Link to="/reconciliation" className="lien-bouton">
-          Relever le solde réel
+          Relever le solde
+        </Link>
+        <Link to={`/comptes/${compte.id}/modifier`} className="lien-bouton">
+          Modifier
         </Link>
       </div>
 

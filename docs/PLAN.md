@@ -271,6 +271,10 @@ exporte, on vide la base, on réimporte, l'état dérivé est identique au bit p
     façon de la rattraper serait la réconciliation, qui la rangerait en « Non
     catégorisé » sans jamais dire qu'il s'agissait d'une erreur de saisie.
     Corriger n'efface rien : c'est un événement de plus.
+11. **Création et clôture d'un compte** — non prévu non plus, et tout aussi
+    nécessaire : l'onboarding ne crée que le compte courant, si bien qu'il n'y
+    avait aucun moyen d'ajouter un livret, un PEA ou de l'or, pourtant tous
+    annoncés en phase 1 (§9). Un compte clôturé s'archive, ne se supprime pas.
 
 ### Lot 6 — Filet et automatismes ✅
 
