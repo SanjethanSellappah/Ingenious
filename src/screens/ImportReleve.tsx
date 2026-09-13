@@ -61,9 +61,14 @@ export function ImportReleve() {
     (compte) => compte.archived_at === undefined && compte.mode === 'saisi',
   )
 
-  const [choixCompte, setChoixCompte] = useState<string>(
-    etat.reglages.compte_courant_id ?? comptes[0]?.id ?? NOUVEAU,
-  )
+  // Le compte courant réglé n'est proposé que s'il figure dans la liste : un
+  // compte archivé, ou passé en mode calculé, laisserait le menu afficher un
+  // choix et l'aperçu porter sur un autre — l'écran mentirait sans rien dire.
+  const [choixCompte, setChoixCompte] = useState<string>(() => {
+    const regle = etat.reglages.compte_courant_id
+    if (regle !== undefined && comptes.some((compte) => compte.id === regle)) return regle
+    return comptes[0]?.id ?? NOUVEAU
+  })
   const [nomCompte, setNomCompte] = useState('')
   const [typeCompte, setTypeCompte] = useState<TypeCompte>('courant')
   // Fixé une fois pour toutes : le recalculer à chaque rendu changerait les
