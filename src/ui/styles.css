@@ -26,37 +26,80 @@
  * Les deux palettes tiennent le même contraste : chaque encre est vérifiée à
  * 4,5 au moins sur son fond, et l'audit d'accessibilité passe dans l'une comme
  * dans l'autre.
+ *
+ * L'ambre a **deux jetons**, et c'est ce qui sauve le thème clair. Un ambre
+ * assez sombre pour s'écrire sur du blanc n'est plus de l'ambre, c'est du brun :
+ * `--accent` reste donc l'ambre vif, employé en aplat avec de l'encre sombre
+ * dessus, et `--accent-encre` est le bronze qu'on emploie quand l'accent doit
+ * s'écrire sur un fond clair. Sur fond sombre les deux se confondent, l'ambre
+ * vif se lisant très bien sur du charbon.
+ *
+ * L'accent est ambre, ce qui oblige aussi à redistribuer deux rôles :
+ *
+ * - `--attention` valait déjà l'ambre. Garder deux ambres différents pour
+ *   « voici l'action » et « attention » n'aurait distingué personne : ils sont
+ *   désormais le même, et c'est cohérent — l'ambre dit « l'application vous
+ *   attend », que ce soit pour agir ou pour confirmer.
+ * - `--alerte` s'écarte franchement de l'accent. Sur fond sombre elle vire au
+ *   corail, sur fond clair au brique : dans les deux cas on ne peut pas la
+ *   confondre avec l'or, ce qui est le seul point qui compte pour une couleur
+ *   qui annonce une perte.
  */
+/*
+ * Inter, embarquée.
+ *
+ * Servie depuis l'application elle-même : `font-src 'self'` n'autorise rien
+ * d'autre, et une police appelée sur un serveur tiers ferait sortir une requête
+ * — donc une trace — à chaque ouverture, pour une application qui ne parle à
+ * personne. Un seul fichier variable couvre toutes les graisses : 47 ko.
+ *
+ * `swap` plutôt que `block` : mieux vaut lire ses comptes dans la police du
+ * système pendant deux dixièmes de seconde que fixer un écran vide.
+ */
+@font-face {
+  font-family: 'Inter';
+  /* Chemin relatif : Vite la résout à la construction, lui donne une empreinte
+     et l'émet avec les autres ressources. Un chemin absolu obligerait à répéter
+     la base du dépôt ici, et le service worker ne la mettrait pas en cache sous
+     le bon nom. */
+  src: url('./inter-latin.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  --fond: #f5f6f8;
+  --fond: #f7f5f0;
   --fond-carte: #ffffff;
-  --fond-enfonce: #eceff3;
-  --encre: #101828;
-  --encre-faible: #55607a;
-  --trait: #dde1e8;
-  --accent: #166534;
-  --accent-sombre: #bbf7d0;
-  --alerte: #be123c;
-  --attention: #a55a00;
-  --sur-accent: #ffffff;
-  --ombre-carte: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 4%);
+  --fond-enfonce: #efece4;
+  --encre: #1a1710;
+  --encre-faible: #6b6353;
+  --trait: #e4dfd3;
+  --accent: #f0a92b;
+  --accent-encre: #7a5300;
+  --accent-sombre: #fbeecd;
+  --alerte: #b4291b;
+  --attention: #7a5300;
+  --sur-accent: #2a1d02;
+  --ombre-carte: 0 1px 2px rgb(60 45 15 / 7%), 0 2px 8px rgb(60 45 15 / 5%);
 
   color-scheme: light;
 }
 
 :root:not([data-theme='clair']) {
   @media (prefers-color-scheme: dark) {
-    --fond: #0f172a;
-    --fond-carte: #1a243b;
-    --fond-enfonce: #131c2f;
-    --encre: #e8edf7;
-    --encre-faible: #9aa8c4;
-    --trait: #2b3a57;
-    --accent: #4ade80;
-    --accent-sombre: #2a5f48;
-    --alerte: #fb7185;
-    --attention: #fbbf24;
-    --sur-accent: #06210f;
+    --fond: #100e09;
+    --fond-carte: #1b1811;
+    --fond-enfonce: #16130d;
+    --encre: #f6f2e9;
+    --encre-faible: #9c9382;
+    --trait: #2c281d;
+    --accent: #f5b93f;
+    --accent-encre: #f5b93f;
+    --accent-sombre: #3d300f;
+    --alerte: #ff8a7a;
+    --attention: #f5b93f;
+    --sur-accent: #2a1d02;
     --ombre-carte: none;
 
     color-scheme: dark;
@@ -64,46 +107,64 @@
 }
 
 :root[data-theme='sombre'] {
-  --fond: #0f172a;
-  --fond-carte: #1a243b;
-  --fond-enfonce: #131c2f;
-  --encre: #e8edf7;
-  --encre-faible: #9aa8c4;
-  --trait: #2b3a57;
-  --accent: #4ade80;
-  --accent-sombre: #2a5f48;
-  --alerte: #fb7185;
-  --attention: #fbbf24;
-  --sur-accent: #06210f;
+  --fond: #100e09;
+  --fond-carte: #1b1811;
+  --fond-enfonce: #16130d;
+  --encre: #f6f2e9;
+  --encre-faible: #9c9382;
+  --trait: #2c281d;
+  --accent: #f5b93f;
+  --accent-encre: #f5b93f;
+  --accent-sombre: #3d300f;
+  --alerte: #ff8a7a;
+  --attention: #f5b93f;
+  --sur-accent: #2a1d02;
   --ombre-carte: none;
 
   color-scheme: dark;
 }
 
 :root[data-theme='clair'] {
-  --fond: #f5f6f8;
+  --fond: #f7f5f0;
   --fond-carte: #ffffff;
-  --fond-enfonce: #eceff3;
-  --encre: #101828;
-  --encre-faible: #55607a;
-  --trait: #dde1e8;
-  --accent: #166534;
-  --accent-sombre: #bbf7d0;
-  --alerte: #be123c;
-  --attention: #a55a00;
-  --sur-accent: #ffffff;
-  --ombre-carte: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 4%);
+  --fond-enfonce: #efece4;
+  --encre: #1a1710;
+  --encre-faible: #6b6353;
+  --trait: #e4dfd3;
+  --accent: #f0a92b;
+  --accent-encre: #7a5300;
+  --accent-sombre: #fbeecd;
+  --alerte: #b4291b;
+  --attention: #7a5300;
+  --sur-accent: #2a1d02;
+  --ombre-carte: 0 1px 2px rgb(60 45 15 / 7%), 0 2px 8px rgb(60 45 15 / 5%);
 
   color-scheme: light;
 }
 
 :root {
-  --rayon: 0.875rem;
-  --rayon-petit: 0.5rem;
+  /* La rondeur est le trait principal du dessin : elle doit être franche,
+     sinon elle passe pour un arrondi timide qu'on n'a pas osé assumer. */
+  --rayon: 1.625rem;
+  --rayon-petit: 1rem;
+  --rayon-pilule: 999px;
   --gouttiere: 1.25rem;
-  --barre-hauteur: 3.75rem;
+  /*
+   * Deux valeurs, et non une.
+   *
+   * `--onglet-hauteur` est la cible tactile d'un onglet ; `--barre-hauteur` est
+   * la place que la barre occupe en bas de l'écran, et que chaque page doit
+   * réserver. Les confondre crée une boucle : agrandir la réserve agrandit la
+   * barre, qui redemande une réserve plus grande. Et une réserve qui ne décrit
+   * plus la barre laisse le dernier bouton d'un écran dessous — visible, mais
+   * impossible à toucher, ce qui est la pire des pannes puisqu'elle ne se voit
+   * pas.
+   */
+  --onglet-hauteur: 3.25rem;
+  --barre-hauteur: 4.25rem;
 
   font-family:
+    'Inter',
     system-ui,
     -apple-system,
     'Segoe UI',
@@ -111,6 +172,9 @@
     sans-serif;
   font-size: 16px;
   line-height: 1.5;
+  /* Les chiffres à chasse fixe partout : sans cela, une colonne de montants
+     ondule et deux soldes ne s'alignent jamais. */
+  font-variant-numeric: tabular-nums;
 }
 
 * {
@@ -143,11 +207,13 @@ h3 {
 h1 {
   font-size: 1.5rem;
   font-weight: 700;
+  letter-spacing: -0.025em;
 }
 
 h2 {
-  font-size: 1.0625rem;
+  font-size: 1rem;
   font-weight: 650;
+  letter-spacing: -0.01em;
 }
 
 h3 {
@@ -201,8 +267,9 @@ p a {
 
 .bouton-icone {
   flex: 0 0 auto;
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2.875rem;
+  height: 2.875rem;
+  border-radius: var(--rayon-pilule);
   padding: 0;
   display: grid;
   place-items: center;
@@ -226,16 +293,16 @@ p a {
   background: var(--fond-carte);
   border: 1px solid var(--trait);
   border-radius: var(--rayon);
-  padding: 0.875rem 1rem;
-  margin-bottom: 0.75rem;
+  padding: 1.125rem 1.25rem;
+  margin-bottom: 0.875rem;
   box-shadow: var(--ombre-carte);
 }
 
 .carte h2 {
-  font-size: 1rem;
-  color: var(--encre-faible);
-  font-weight: 600;
-  margin-bottom: 0.5rem;
+  font-size: 0.9375rem;
+  color: var(--encre);
+  font-weight: 650;
+  margin-bottom: 0.75rem;
 }
 
 .discret {
@@ -252,9 +319,11 @@ p a {
   right: 0;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  background: var(--fond-enfonce);
+  background: var(--fond-carte);
   border-top: 1px solid var(--trait);
-  padding-bottom: env(safe-area-inset-bottom);
+  border-radius: var(--rayon) var(--rayon) 0 0;
+  padding: 0.375rem 0.5rem;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 0.375rem);
 }
 
 .onglets a {
@@ -264,17 +333,28 @@ p a {
   justify-content: center;
   gap: 0.125rem;
   /* Cible tactile d'au moins 44 px de haut. */
-  min-height: var(--barre-hauteur);
+  min-height: var(--onglet-hauteur);
   color: var(--encre-faible);
   text-decoration: none;
   font-size: 0.6875rem;
 }
 
+.onglets a {
+  margin: 0 0.125rem;
+  border-radius: var(--rayon-pilule);
+}
+
+/*
+ * L'onglet actif est une pilule pleine.
+ *
+ * Il ne se signale donc pas que par la couleur — c'est la forme qui change, et
+ * la graisse avec elle. Un contraste élevé posé sur l'accent reste lisible à qui
+ * ne distingue pas les teintes.
+ */
 .onglets a[aria-current='page'] {
-  color: var(--accent);
-  /* L'onglet actif ne se signale pas que par la couleur. */
+  background: var(--accent);
+  color: var(--sur-accent);
   font-weight: 700;
-  box-shadow: inset 0 2px 0 var(--accent);
 }
 
 /* Les icônes suivent la couleur du texte : l'onglet actif les colore avec son
@@ -305,11 +385,12 @@ h1 > .icone {
 }
 
 .montant-entree {
-  color: var(--accent);
+  color: var(--accent-encre);
 }
 
 .montant-principal {
-  font-size: 2.5rem;
+  font-size: 3rem;
+  letter-spacing: -0.045em;
   font-weight: 700;
   letter-spacing: -0.03em;
 }
@@ -402,8 +483,9 @@ select {
   background: var(--fond-enfonce);
   border: 1px solid var(--trait);
   border-radius: var(--rayon-petit);
-  padding: 0.75rem 0.875rem;
-  min-height: 2.75rem;
+  padding: 0.8125rem 1rem;
+  min-height: 2.875rem;
+  color: var(--encre);
 }
 
 input:focus-visible,
@@ -434,10 +516,10 @@ button {
   background: var(--accent);
   color: var(--sur-accent);
   border: none;
-  border-radius: var(--rayon-petit);
-  padding: 0.75rem 1.25rem;
-  min-height: 2.75rem;
-  font-weight: 600;
+  border-radius: var(--rayon-pilule);
+  padding: 0.8125rem 1.375rem;
+  min-height: 2.875rem;
+  font-weight: 650;
   cursor: pointer;
 }
 
@@ -447,7 +529,7 @@ button:disabled {
 }
 
 button.secondaire {
-  background: transparent;
+  background: var(--fond-enfonce);
   border: 1px solid var(--trait);
   color: var(--encre);
 }
@@ -508,7 +590,8 @@ button.secondaire {
 }
 
 .avertissement {
-  border: 1px solid var(--attention);
+  border: 1px solid color-mix(in srgb, var(--attention) 45%, var(--trait));
+  background: color-mix(in srgb, var(--attention) 8%, transparent);
   border-radius: var(--rayon-petit);
   padding: 0.75rem 0.875rem;
   font-size: 0.875rem;
@@ -607,7 +690,9 @@ button.secondaire {
 
 .courbe-trait {
   fill: none;
-  stroke: #16a34a;
+  /* La courbe suit l'accent, par son jeton d'encre : une couleur de trait
+     écrite en dur resterait verte quand tout le reste a changé de teinte. */
+  stroke: var(--accent-encre);
   stroke-width: 2;
   stroke-linejoin: round;
   stroke-linecap: round;
@@ -619,7 +704,7 @@ button.secondaire {
 }
 
 .courbe-bande {
-  fill: #16a34a;
+  fill: var(--accent-encre);
   fill-opacity: 0.12;
   stroke: none;
 }
@@ -688,37 +773,41 @@ button.secondaire {
 }
 
 /*
- * Une carte qui appelle une action.
+ * La carte qui appelle une action.
  *
- * Un cerclage complet crie aussi fort qu'un autre, et deux cartes cerclées
- * côte à côte ne se hiérarchisent plus : tout devient urgent, donc rien ne
- * l'est. Un liseré à gauche suffit à sortir du flot, et le fond légèrement
- * teinté fait le reste.
+ * Un cerclage complet crie aussi fort qu'un autre, et deux cartes cerclées côte
+ * à côte ne se hiérarchisent plus : tout devient urgent, donc rien ne l'est.
+ *
+ * Pas de barre latérale non plus : sur une carte très arrondie, une bordure
+ * gauche se coupe en biseau dans l'angle et donne un éclat de couleur mal fini.
+ * C'est l'icône du titre qui porte l'accent — elle était déjà là et elle dit
+ * quelque chose, là où une pastille ajoutée à côté n'aurait fait qu'une marque
+ * de plus pour le même propos.
  */
 .a-confirmer {
-  border-color: var(--trait);
-  border-left: 3px solid var(--attention);
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--attention) 8%, transparent), transparent 40%),
-    var(--fond-carte);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--trait));
 }
 
 .a-confirmer h2 {
   color: var(--encre);
 }
 
+.a-confirmer h2 .icone {
+  color: var(--accent-encre);
+}
+
 .lien-action {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  margin-top: 0.75rem;
-  padding: 0.4375rem 0.75rem;
-  color: var(--accent);
-  font-weight: 600;
+  margin-top: 0.875rem;
+  padding: 0.5625rem 1rem;
+  color: var(--accent-encre);
+  font-weight: 650;
   font-size: 0.9375rem;
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: var(--rayon-pilule);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .lien-action::after {
@@ -738,6 +827,7 @@ button.secondaire {
 .segments button {
   background: var(--fond-enfonce);
   border: 1px solid var(--trait);
+  border-radius: var(--rayon-pilule);
   color: var(--encre-faible);
   font-weight: 500;
 }
@@ -846,7 +936,7 @@ button.secondaire {
 }
 
 .pastille.entree {
-  color: var(--accent);
+  color: var(--accent-encre);
 }
 
 /* --- Dépenses par label --------------------------------------------------- */
@@ -891,18 +981,18 @@ button.secondaire {
   align-items: center;
   justify-content: center;
   flex: 1;
-  min-height: 2.75rem;
+  min-height: 2.875rem;
   text-align: center;
   background: var(--accent);
   color: var(--sur-accent);
-  border-radius: var(--rayon-petit);
-  padding: 0.75rem 1.25rem;
-  font-weight: 600;
+  border-radius: var(--rayon-pilule);
+  padding: 0.8125rem 1.375rem;
+  font-weight: 650;
   text-decoration: none;
 }
 
 .lien-bouton.secondaire {
-  background: transparent;
+  background: var(--fond-enfonce);
   border: 1px solid var(--trait);
   color: var(--encre);
 }
@@ -920,10 +1010,10 @@ button.secondaire {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  min-height: 2.75rem;
-  padding: 0.625rem 0.875rem;
+  min-height: 2.875rem;
+  padding: 0.6875rem 1rem;
   border: 1px solid var(--trait);
-  border-radius: var(--rayon-petit);
+  border-radius: var(--rayon-pilule);
   background: var(--fond-carte);
   color: var(--encre);
   font-size: 0.9375rem;
