@@ -11,9 +11,10 @@ const base = '/Ingenious/'
  * Politique de sécurité du contenu.
  *
  * L'application ne charge rien d'extérieur : ni police, ni script, ni image
- * distante, ni appel réseau. La politique la plus stricte est donc gratuite, et
- * c'est la seule barrière disponible contre un script injecté — GitHub Pages ne
- * permet pas d'en-têtes HTTP, seule la balise `meta` est possible.
+ * distante. Le seul appel réseau qu'elle fasse est la cotation des instruments,
+ * et `connect-src` n'autorise que cet hôte-là. La politique reste donc aussi
+ * stricte qu'elle peut l'être — c'est la seule barrière disponible contre un
+ * script injecté, GitHub Pages ne permettant pas d'en-têtes HTTP.
  *
  * `frame-ancestors` en est absent volontairement : cette directive est ignorée
  * dans une balise `meta`, l'y mettre donnerait l'illusion d'une protection.
@@ -24,7 +25,10 @@ const CSP = [
   "style-src 'self'",
   "img-src 'self' data:",
   "font-src 'self'",
-  "connect-src 'self'",
+  // Le seul hôte extérieur de toute l'application : le service de cotation, et
+  // uniquement lui. Une liste plus large signifierait une politique plus large,
+  // pour un bénéfice que personne n'a demandé.
+  "connect-src 'self' https://api.twelvedata.com",
   "worker-src 'self'",
   "manifest-src 'self'",
   "object-src 'none'",

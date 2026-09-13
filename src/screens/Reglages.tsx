@@ -4,6 +4,7 @@ import { formaterMontant, type Cents } from '../core/money'
 import { depotCourant, ecrire, recharger } from '../app/magasin'
 import { marquerExport, rappelSauvegarde } from '../app/automatismes'
 import { useEtat } from '../app/useEtat'
+import { actualiserCours, cleCours, enregistrerCleCours, SERVICE } from '../app/cours'
 import { choisirTheme, sabonnerTheme, themeChoisi, type Theme } from '../app/theme'
 import { labelsActifs, resoudreLabel, suggestionsLabels } from '../domain/labels'
 import { installationProposee, installer, sabonnerInstallation } from '../app/installation'
@@ -235,6 +236,8 @@ export function Reglages({
       </div>
 
       <Apparence />
+
+      <Cotations />
 
       <GestionLabels />
 
@@ -470,6 +473,112 @@ function CompteCourant({
  * suit la bascule automatique du système au coucher du soleil, et le retirer
  * obligerait à venir rebasculer l'application deux fois par jour.
  */
+/**
+ * Clé du service de cotation.
+ *
+ * Elle vit en mémoire locale, à côté des données et jamais dedans : l'export est
+ * en clair et se transmet, et une clé partie dans une sauvegarde est une clé
+ * publiée. C'est aussi pourquoi elle n'est pas chiffrée par le code de
+ * verrouillage — elle n'a rien à faire dans ce qui se recopie d'un appareil à
+ * l'autre, et il faut le dire plutôt que de le laisser croire.
+ */
+function Cotations() {
+  const { etat } = useEtat()
+  const [cle, setCle] = useState(cleCours())
+  const [occupe, setOccupe] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [echecs, setEchecs] = useState<{ symbole: string; raison: string }[]>([])
+  const instruments = [...etat.instruments.values()]
+
+  function enregistrer() {
+    enregistrerCleCours(cle)
+    setMessage(cle.trim() === '' ? 'Clé effacée.' : 'Clé enregistrée sur cet appareil.')
+  }
+
+  async function actualiser() {
+    setOccupe(true)
+    setMessage(null)
+    setEchecs([])
+    try {
+      const resultat = await actualiserCours(etat)
+      setEchecs(resultat.echecs)
+      setMessage(
+        resultat.misAJour === 0
+          ? 'Aucun cours mis à jour.'
+          : `${resultat.misAJour} cours mis à jour.`,
+      )
+    } catch (erreur) {
+      setMessage(erreur instanceof Error ? erreur.message : String(erreur))
+    } finally {
+      setOccupe(false)
+    }
+  }
+
+  if (instruments.length === 0) return null
+
+  return (
+    <div className="carte">
+      <h2>Cours des instruments</h2>
+      <p className="discret">
+        {instruments.length === 1
+          ? '1 instrument déclaré.'
+          : `${instruments.length} instruments déclarés.`}{' '}
+        Sans clé, les cours se saisissent à la main depuis chaque compte — l’application n’a besoin
+        de rien d’autre pour fonctionner.
+      </p>
+
+      <div className="champ">
+        <label htmlFor="cle-cours">Clé {SERVICE.nom}</label>
+        <div className="ligne-saisie">
+          <input
+            id="cle-cours"
+            type="password"
+            value={cle}
+            autoComplete="off"
+            placeholder="collez votre clé"
+            onChange={(e) => setCle(e.target.value)}
+          />
+          <button type="button" className="secondaire" onClick={enregistrer} disabled={occupe}>
+            Garder
+          </button>
+        </div>
+        <p className="avertissement">
+          <strong>Cette clé n’est pas chiffrée</strong> et n’entre pas dans vos exports : elle reste
+          sur cet appareil. C’est voulu — une clé partie dans une sauvegarde qu’on transmet est une
+          clé publiée.
+        </p>
+      </div>
+
+      <div className="actions">
+        <button type="button" onClick={() => void actualiser()} disabled={occupe}>
+          {occupe ? 'Actualisation…' : 'Actualiser les cours'}
+        </button>
+      </div>
+
+      {message !== null && (
+        <p className="discret" role="status">
+          {message}
+        </p>
+      )}
+      {echecs.length > 0 && (
+        <div className="erreur-champ">
+          <p>Ce qui n’a pas pu être coté :</p>
+          <ul>
+            {echecs.slice(0, 5).map((echec, rang) => (
+              <li key={rang}>
+                {echec.symbole} — {echec.raison}
+              </li>
+            ))}
+          </ul>
+          <p className="discret">
+            Les cours déjà connus continuent de valoir : rien n’est effacé, rien ne passe à zéro.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Apparence() {
   const theme = useSyncExternalStore(sabonnerTheme, themeChoisi, () => 'systeme')
   const choix: { valeur: Theme; libelle: string }[] = [

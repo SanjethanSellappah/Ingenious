@@ -67,6 +67,29 @@ semaine.
 Si la persistance est refusée malgré l'installation, dites-le moi : cela change
 ce que l'application doit promettre.
 
+## 4 bis. Les cours automatiques — la seule chose non éprouvée
+
+Tout le reste de l'application est vérifié dans un navigateur. **Pas ceci** : je
+n'ai ni clé ni accès au service depuis l'environnement de développement. Le
+câblage est testé — la clé part au bon hôte, le cours reçu est écrit et daté, un
+refus n'efface rien, la clé reste hors de l'export — mais la forme réelle de la
+réponse du service ne l'est pas.
+
+- [ ] Créer un compte gratuit sur `twelvedata.com`, récupérer la clé.
+- [ ] **Réglages → Cours des instruments → Garder**, puis **Actualiser les
+      cours**.
+- [ ] Vérifier que le nombre de cours mis à jour correspond au nombre
+      d'instruments, et que la valorisation change.
+- [ ] Comparer un cours obtenu avec celui affiché par votre courtier.
+
+Si l'actualisation échoue, le message donne la raison par instrument. Envoyez-la
+moi : c'est très probablement la forme de la réponse qui diffère, et c'est une
+correction de quelques lignes.
+
+L'or est interrogé en `XAU/EUR` et ramené au gramme si c'est en grammes que vous
+comptez. **Vérifiez ce chiffre en premier** : une once fait 31,1 g, et une erreur
+d'unité se voit tout de suite.
+
 ## 5. Deux appareils
 
 - [ ] Installer aussi sur un second appareil, ou dans un autre navigateur.

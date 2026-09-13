@@ -125,6 +125,69 @@ exiger(types.has('instrument.created'), 'les instruments ne sont pas dans le jou
 exiger(types.has('holding.created'), 'les lignes ne sont pas dans le journal exporté')
 exiger(types.has('instrument.quoted'), 'les cours ne sont pas dans le journal exporté')
 
+// --- L'actualisation automatique, requête interceptée ---
+// Le service réel n'est pas joignable d'ici et aucune clé n'existe : on vérifie
+// le câblage, pas le fournisseur — que la clé parte au bon hôte, que le cours
+// reçu soit écrit, et qu'un refus n'efface rien.
+await page.route('https://api.twelvedata.com/**', (route) => {
+  const url = route.request().url()
+  const prix = url.includes('XAU') ? '2400' : '41.00'
+  return route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ price: prix }),
+  })
+})
+await page.goto(base + '#/reglages', { waitUntil: 'networkidle' })
+await page.waitForTimeout(400)
+const carteCours = await page.locator('.carte:has(h2:text("Cours des instruments"))').count()
+dit('8.', 'écran de cotation présent : ' + (carteCours > 0))
+exiger(carteCours > 0, 'aucun réglage de cotation alors que des instruments existent')
+
+// Sans clé, l'actualisation doit le dire plutôt que d'échouer en silence.
+await page.click('button:has-text("Actualiser les cours")')
+await page.waitForTimeout(800)
+let vuReglages = await corps()
+dit('9.', 'sans clé : ' + (/aucune clé/.test(vuReglages) ? 'annoncé' : 'SILENCE'))
+exiger(/aucune clé/.test(vuReglages), 'une actualisation sans clé n’explique rien')
+
+await page.fill('#cle-cours', 'clef-de-test')
+await page.click('button:has-text("Garder")')
+await page.waitForTimeout(300)
+await page.click('button:has-text("Actualiser les cours")')
+await page.waitForTimeout(1200)
+vuReglages = await corps()
+dit(
+  '10.',
+  'après actualisation : ' +
+    (/2 cours mis à jour/.test(vuReglages)
+      ? '2 cours'
+      : vuReglages.slice(vuReglages.indexOf('Actualiser'), vuReglages.indexOf('Actualiser') + 90)),
+)
+exiger(/2 cours mis à jour/.test(vuReglages), 'les deux instruments n’ont pas été cotés')
+
+await page.goto(base + lien.slice(lien.indexOf('#/')), { waitUntil: 'networkidle' })
+await page.waitForTimeout(500)
+vu = await corps()
+dit('11.', 'valorisation actualisée : ' + vu.slice(vu.indexOf('Solde'), vu.indexOf('Solde') + 70))
+// 12 × 41,00 = 492,00. L'or : 2 400 € l'once ramenés au gramme font 77,16 €
+// une fois arrondis au centime, et 3,5 × 77,16 = 270,06. Total 762,06.
+// L'arrondi se fait sur le cours unitaire, pas sur la ligne : c'est ce qui
+// permet de refaire le calcul de tête depuis les chiffres affichés.
+exiger(/762,06/.test(vu), 'total attendu 762,06 € après actualisation')
+
+// La clé ne doit jamais partir dans l'export.
+await page.goto(base + '#/reglages', { waitUntil: 'networkidle' })
+const [dl2] = await Promise.all([
+  page.waitForEvent('download', { timeout: 20000 }),
+  page.click('button:has-text("Exporter")'),
+])
+const flux2 = await dl2.createReadStream()
+let contenu2 = ''
+for await (const bloc of flux2) contenu2 += bloc
+dit('12.', 'la clé est absente de l’export : ' + !contenu2.includes('clef-de-test'))
+exiger(!contenu2.includes('clef-de-test'), 'LA CLÉ EST PARTIE DANS L’EXPORT')
+
 console.log('\nproblèmes :', problemes.length ? problemes.join('\n  ') : 'aucun')
 console.log('erreurs :', erreurs.length ? [...new Set(erreurs)].slice(0, 4).join(' | ') : 'aucune')
 await nav.close()
