@@ -16,7 +16,8 @@
 import { type CivilDate } from '../core/civilDate'
 import { dateAffichee } from '../core/recurrence'
 import { cents, negatif, type Cents } from '../core/money'
-import type { Etat, Exception, Label, Releve } from './etat'
+import { valoriser, type Valorisation } from '../core/valorisation'
+import type { Etat, Exception, Label, Ligne, Releve } from './etat'
 import { cleException, normaliserNom } from './etat'
 
 export type NatureMouvement = 'transaction' | 'virement' | 'occurrence'
@@ -134,6 +135,11 @@ export function ancreDuCompte(etat: Etat, account_id: string, jusqua?: CivilDate
  * qui permet de saisir une dépense après avoir réconcilié le même jour.
  */
 export function soldeDuCompte(etat: Etat, account_id: string, jusqua: CivilDate): Cents {
+  // Un compte calculé n'a pas de solde qu'on relèverait : il vaut ses lignes au
+  // cours du jour. Y ajouter des mouvements mélangerait deux façons de compter.
+  const compte = etat.comptes.get(account_id)
+  if (compte?.mode === 'calcule') return valorisationDuCompte(etat, account_id, jusqua).total_cents
+
   const ancre = ancreDuCompte(etat, account_id, jusqua)
   let total = ancre?.solde_cents ?? 0
   for (const mouvement of mouvementsDuCompte(etat, account_id)) {
@@ -145,6 +151,31 @@ export function soldeDuCompte(etat: Etat, account_id: string, jusqua: CivilDate)
     total += mouvement.montant_cents
   }
   return cents(total)
+}
+
+/** Lignes détenues sur un compte, celles qu'on a retirées exclues. */
+export function lignesDuCompte(etat: Etat, account_id: string): Ligne[] {
+  return [...etat.lignes.values()].filter(
+    (ligne) => ligne.account_id === account_id && ligne.supprime !== true,
+  )
+}
+
+/**
+ * Valeur d'un compte calculé, et ce qu'on sait de sa fraîcheur.
+ *
+ * La date du cours le plus ancien remonte avec le total : une valorisation dont
+ * on ignore l'âge n'apprend rien, et « 4 300 € » ne veut pas dire la même chose
+ * selon qu'il date d'hier ou de mars.
+ */
+export function valorisationDuCompte(
+  etat: Etat,
+  account_id: string,
+  jusqua: CivilDate,
+): Valorisation {
+  const coursParInstrument = new Map(
+    [...etat.instruments.values()].map((instrument) => [instrument.id, instrument.cours]),
+  )
+  return valoriser(lignesDuCompte(etat, account_id), coursParInstrument, jusqua)
 }
 
 /** Patrimoine : somme des soldes, comptes archivés exclus. */

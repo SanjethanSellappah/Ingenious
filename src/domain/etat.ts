@@ -36,6 +36,49 @@ export type Compte = {
   masque?: boolean
 }
 
+export type GenreInstrument = 'action' | 'etf' | 'or'
+export type UniteInstrument = 'part' | 'gramme' | 'once'
+
+/**
+ * Ce qu'on détient : une action, un ETF, du métal.
+ *
+ * Le symbole est ce qui permettra d'aller chercher un cours ; le nom est ce que
+ * l'utilisateur lit. Les deux sont distincts parce que « CW8 » ne dit rien à
+ * personne dans six mois.
+ */
+export type Instrument = {
+  id: string
+  symbole: string
+  nom: string
+  genre: GenreInstrument
+  /** Ce qu'on compte. Une part pour un titre, un gramme ou une once pour l'or. */
+  unite: UniteInstrument
+  /** Cours relevés, du plus ancien au plus récent. */
+  cours: CoursInstrument[]
+}
+
+export type CoursInstrument = {
+  date: CivilDate
+  cours_cents: Cents
+  /** D'où vient ce cours : saisi à la main, ou nommé par le fournisseur. */
+  source?: string
+}
+
+/**
+ * Une ligne détenue sur un compte.
+ *
+ * La quantité est en **millièmes** : on détient 12,345 parts d'un ETF ou 3,5 g
+ * d'or, et un entier de parts obligerait à arrondir la quantité elle-même — ce
+ * qui fausserait la valorisation bien plus qu'un arrondi de centimes.
+ */
+export type Ligne = {
+  id: string
+  account_id: string
+  instrument_id: string
+  quantite_millimes: number
+  supprime?: boolean
+}
+
 /** Relevé saisi par l'utilisateur. Sert d'ancre au calcul de solde. */
 export type Releve = {
   account_id: string
@@ -121,6 +164,8 @@ export type Etat = {
   abonnements: Map<string, Abonnement>
   exceptions: Map<string, Exception>
   instantanes: Instantane[]
+  instruments: Map<string, Instrument>
+  lignes: Map<string, Ligne>
   reglages: Reglages
 }
 
@@ -154,6 +199,8 @@ export function etatVide(): Etat {
     abonnements: new Map(),
     exceptions: new Map(),
     instantanes: [],
+    instruments: new Map(),
+    lignes: new Map(),
     reglages: { reserve_cents: 0 as Cents },
   }
 }
@@ -378,19 +425,66 @@ function appliquer(etat: Etat, evenement: Evenement): void {
       })
       break
 
+    case 'instrument.created':
+      etat.instruments.set(texte(p, 'id'), {
+        id: texte(p, 'id'),
+        symbole: texte(p, 'symbole'),
+        nom: texte(p, 'nom'),
+        genre: p.genre as GenreInstrument,
+        unite: (p.unite as UniteInstrument | undefined) ?? 'part',
+        cours: [],
+      })
+      break
+
+    case 'instrument.updated': {
+      const instrument = etat.instruments.get(texte(p, 'id'))
+      if (!instrument) break
+      if (typeof p.symbole === 'string') instrument.symbole = p.symbole
+      if (typeof p.nom === 'string') instrument.nom = p.nom
+      if (typeof p.genre === 'string') instrument.genre = p.genre as GenreInstrument
+      if (typeof p.unite === 'string') instrument.unite = p.unite as UniteInstrument
+      break
+    }
+
+    case 'instrument.quoted': {
+      const instrument = etat.instruments.get(texte(p, 'instrument_id'))
+      if (!instrument) break
+      // Un seul cours par jour et par instrument : deux relevés le même jour
+      // décrivent le même fait, le dernier écrit l'emporte.
+      const jour = date(p, 'date')
+      const rang = instrument.cours.findIndex((c) => c.date === jour)
+      const releve = {
+        date: jour,
+        cours_cents: nombre(p, 'cours_cents'),
+        ...(typeof p.source === 'string' ? { source: p.source } : {}),
+      }
+      if (rang >= 0) instrument.cours[rang] = releve
+      else instrument.cours.push(releve)
+      break
+    }
+
+    case 'holding.created':
+      etat.lignes.set(texte(p, 'id'), {
+        id: texte(p, 'id'),
+        account_id: texte(p, 'account_id'),
+        instrument_id: texte(p, 'instrument_id'),
+        quantite_millimes: p.quantite_millimes as number,
+      })
+      break
+
+    case 'holding.updated': {
+      const ligne = etat.lignes.get(texte(p, 'id'))
+      if (!ligne) break
+      if (typeof p.quantite_millimes === 'number') ligne.quantite_millimes = p.quantite_millimes
+      if (typeof p.supprime === 'boolean') ligne.supprime = p.supprime
+      break
+    }
+
     case 'settings.updated':
       if (typeof p.reserve_cents === 'number')
         etat.reglages.reserve_cents = p.reserve_cents as Cents
       if (typeof p.compte_courant_id === 'string')
         etat.reglages.compte_courant_id = p.compte_courant_id
-      break
-
-    // Phase 2 : les événements sont transportés par le journal, mais rien ne les
-    // plie encore. Les ignorer ne perd rien — ils restent dans le journal.
-    case 'instrument.created':
-    case 'instrument.updated':
-    case 'holding.created':
-    case 'holding.updated':
       break
   }
 }
@@ -446,6 +540,9 @@ export function plier(evenements: readonly Evenement[]): Etat {
   const parJour = new Map<string, Instantane>()
   for (const instantane of etat.instantanes) {
     parJour.set(cleInstantane(instantane.account_id, instantane.date), instantane)
+  }
+  for (const instrument of etat.instruments.values()) {
+    instrument.cours.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
   }
   etat.instantanes = [...parJour.values()].sort((a, b) =>
     a.date !== b.date ? (a.date < b.date ? -1 : 1) : a.account_id < b.account_id ? -1 : 1,

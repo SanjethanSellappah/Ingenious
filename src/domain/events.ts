@@ -50,6 +50,7 @@ export const TYPES_EVENEMENT = [
   // Phase 2, réservés maintenant pour ne pas renuméroter le format plus tard.
   'instrument.created',
   'instrument.updated',
+  'instrument.quoted',
   'holding.created',
   'holding.updated',
 ] as const
@@ -96,6 +97,8 @@ function dateCivileChamp(valeur: unknown, chemin: string): CivilDate {
 const TYPES_COMPTE = ['courant', 'livret', 'pea', 'cto', 'av', 'or', 'autre'] as const
 const GROUPES_COMPTE = ['bancaire', 'investissement'] as const
 const MODES_COMPTE = ['saisi', 'calcule'] as const
+const GENRES_INSTRUMENT = ['action', 'etf', 'or'] as const
+const UNITES_INSTRUMENT = ['part', 'gramme', 'once'] as const
 const ORIGINES = ['manuel', 'csv', 'recurrence', 'reconciliation'] as const
 const SENS = ['depense', 'rentree'] as const
 const MODES_MONTANT = ['fixe', 'estime'] as const
@@ -259,10 +262,54 @@ const VALIDATEURS: Record<
   // Phase 2 : seul l'identifiant est vérifié. Le reste de la charge utile passe
   // tel quel, comme pour tout champ inconnu — une version qui ne sait pas lire
   // un événement doit quand même savoir le transporter sans l'abîmer.
-  'instrument.created': (p, c) => ({ id: chaine(p.id, `${c}.id`) }),
-  'instrument.updated': (p, c) => ({ id: chaine(p.id, `${c}.id`) }),
-  'holding.created': (p, c) => ({ id: chaine(p.id, `${c}.id`) }),
-  'holding.updated': (p, c) => ({ id: chaine(p.id, `${c}.id`) }),
+  'instrument.created': (p, c) =>
+    sansIndefinis({
+      id: chaine(p.id, `${c}.id`),
+      symbole: chaine(p.symbole, `${c}.symbole`, { max: 32 }),
+      nom: chaine(p.nom, `${c}.nom`, { max: 120 }),
+      genre: parmi(p.genre, `${c}.genre`, GENRES_INSTRUMENT),
+      // L'unité de l'or n'est pas une part : on en détient des grammes ou des
+      // onces, et confondre les deux fait un facteur trente et un.
+      unite: optionnel(p.unite, (v) => parmi(v, `${c}.unite`, UNITES_INSTRUMENT)),
+    }),
+  'instrument.updated': (p, c) =>
+    sansIndefinis({
+      id: chaine(p.id, `${c}.id`),
+      symbole: optionnel(p.symbole, (v) => chaine(v, `${c}.symbole`, { max: 32 })),
+      nom: optionnel(p.nom, (v) => chaine(v, `${c}.nom`, { max: 120 })),
+      genre: optionnel(p.genre, (v) => parmi(v, `${c}.genre`, GENRES_INSTRUMENT)),
+      unite: optionnel(p.unite, (v) => parmi(v, `${c}.unite`, UNITES_INSTRUMENT)),
+    }),
+  /**
+   * Un cours relevé, à une date.
+   *
+   * Un cours est daté comme un tarif d'abonnement : sans la date, on ne saurait
+   * pas si le chiffre affiché date d'aujourd'hui ou de six mois, et une
+   * valorisation dont on ignore l'âge ne vaut rien.
+   */
+  'instrument.quoted': (p, c) =>
+    sansIndefinis({
+      instrument_id: chaine(p.instrument_id, `${c}.instrument_id`),
+      date: dateCivileChamp(p.date, `${c}.date`),
+      cours_cents: entier(p.cours_cents, `${c}.cours_cents`, { min: 0 }),
+      source: optionnel(p.source, (v) => chaine(v, `${c}.source`, { max: 64 })),
+    }),
+  'holding.created': (p, c) => ({
+    id: chaine(p.id, `${c}.id`),
+    account_id: chaine(p.account_id, `${c}.account_id`),
+    instrument_id: chaine(p.instrument_id, `${c}.instrument_id`),
+    // Les quantités se comptent en millièmes : on détient 12,345 parts d'un ETF
+    // ou 3,5 g d'or, et un entier obligerait à arrondir la quantité elle-même.
+    quantite_millimes: entier(p.quantite_millimes, `${c}.quantite_millimes`, { min: 0 }),
+  }),
+  'holding.updated': (p, c) =>
+    sansIndefinis({
+      id: chaine(p.id, `${c}.id`),
+      quantite_millimes: optionnel(p.quantite_millimes, (v) =>
+        entier(v, `${c}.quantite_millimes`, { min: 0 }),
+      ),
+      supprime: optionnel(p.supprime, (v) => booleen(v, `${c}.supprime`)),
+    }),
 }
 
 function validerAbonnement(

@@ -43,6 +43,7 @@ un code de sortie non nul ou sur un problème annoncé dans la sortie.
 | `installation` | le bouton d'installation : proposé, consommé une fois, absent quand elle est faite |
 | `signales` | les défauts remontés à l'usage : abonnements de l'installation, labels, axes de la courbe |
 | `discretion` | masquer les montants : d'un geste, par compte, sur tous les écrans, après rechargement |
+| `investissement` | un compte suivi par ses lignes : parts, or, cours datés, ligne sans cours |
 | `interruption` | application fermée en plein chiffrement _(long)_ |
 | `volume` | quinze ans de journal : ouverture, navigation, chiffrement _(long)_ |
 | `parcours` | le parcours complet, d'un bout à l'autre |

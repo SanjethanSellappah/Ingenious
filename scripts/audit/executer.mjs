@@ -41,6 +41,7 @@ const TOUS = [
   'installation',
   'signales',
   'discretion',
+  'investissement',
   'parcours',
   'code',
   'pin',

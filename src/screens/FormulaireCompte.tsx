@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { aujourdhui } from '../core/clock'
 import { ecrire } from '../app/magasin'
 import { useEtat } from '../app/useEtat'
-import type { GroupeCompte, TypeCompte } from '../domain/etat'
+import type { GroupeCompte, ModeCompte, TypeCompte } from '../domain/etat'
 import { identifiant } from '../domain/identifiant'
 import { SaisieMontant } from '../ui/SaisieMontant'
 import type { Cents } from '../core/money'
@@ -42,10 +42,13 @@ export function FormulaireCompte() {
   const [groupe, setGroupe] = useState<GroupeCompte>(existant?.groupe ?? 'bancaire')
   const [solde, setSolde] = useState<Cents | null>(null)
   const [masque, setMasque] = useState(existant?.masque === true)
+  const [mode, setMode] = useState<ModeCompte>(existant?.mode ?? 'saisi')
   const [occupe, setOccupe] = useState(false)
   const [confirmeArchivage, setConfirmeArchivage] = useState(false)
 
-  const valide = nom.trim() !== '' && (existant !== undefined || solde !== null)
+  // Un compte calculé n'a pas de solde de départ : il vaudra ses lignes.
+  const valide =
+    nom.trim() !== '' && (existant !== undefined || mode === 'calcule' || solde !== null)
 
   function choisirType(valeur: TypeCompte) {
     setType(valeur)
@@ -63,10 +66,10 @@ export function FormulaireCompte() {
       const entrees: Parameters<typeof ecrire>[0][number][] = [
         {
           type: existant ? 'account.updated' : 'account.created',
-          payload: { id: compteId, nom: nom.trim(), type, groupe, mode: 'saisi', masque },
+          payload: { id: compteId, nom: nom.trim(), type, groupe, mode, masque },
         },
       ]
-      if (solde !== null) {
+      if (solde !== null && mode === 'saisi') {
         entrees.push({
           type: 'account.balance_set',
           payload: { account_id: compteId, date: jour, solde_cents: solde },
@@ -159,10 +162,35 @@ export function FormulaireCompte() {
         </select>
       </div>
 
-      <SaisieMontant
-        libelle={existant ? 'Relever le solde (facultatif)' : 'Solde actuel'}
-        onChange={setSolde}
-      />
+      {groupe === 'investissement' && (
+        <div className="champ">
+          <span className="etiquette">Comment suivre ce compte</span>
+          <div className="segments" role="group" aria-label="Mode de suivi">
+            <button type="button" aria-pressed={mode === 'saisi'} onClick={() => setMode('saisi')}>
+              Je relève le solde
+            </button>
+            <button
+              type="button"
+              aria-pressed={mode === 'calcule'}
+              onClick={() => setMode('calcule')}
+            >
+              Je saisis mes lignes
+            </button>
+          </div>
+          <p className="discret">
+            {mode === 'saisi'
+              ? 'Vous tapez le montant que votre courtier affiche, une fois par mois.'
+              : 'Vous déclarez ce que vous détenez — tant de parts, tant de grammes — et l’application calcule la valeur au dernier cours connu.'}
+          </p>
+        </div>
+      )}
+
+      {mode === 'saisi' && (
+        <SaisieMontant
+          libelle={existant ? 'Relever le solde (facultatif)' : 'Solde actuel'}
+          onChange={setSolde}
+        />
+      )}
 
       <div className="champ">
         <label className="ligne-bascule" htmlFor="masquer-compte">

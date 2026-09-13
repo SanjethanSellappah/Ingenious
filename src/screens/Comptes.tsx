@@ -9,6 +9,7 @@ import type { Compte, Etat } from '../domain/etat'
 import { ancreDuCompte, mouvementsDuCompte, patrimoine, soldeDuCompte } from '../domain/selecteurs'
 import { Icone } from '../ui/Icone'
 import { Montant } from '../ui/Montant'
+import { FraicheurValorisation, LignesDuCompte } from './Lignes'
 
 const LIBELLES_TYPE: Record<string, string> = {
   courant: 'Compte courant',
@@ -204,7 +205,9 @@ export function DetailCompte() {
           neutre
           masque={compte.masque === true}
         />
-        {ancre !== null ? (
+        {compte.mode === 'calcule' ? (
+          <FraicheurValorisation etat={etat} compte={compte} jour={jour} />
+        ) : ancre !== null ? (
           <p className="discret">
             Dernier relevé le {ancre.date} à{' '}
             <Montant valeur={ancre.solde_cents} neutre masque={compte.masque === true} />, plus les
@@ -215,11 +218,18 @@ export function DetailCompte() {
         )}
       </div>
 
+      {compte.mode === 'calcule' && <LignesDuCompte compte={compte} jour={jour} />}
+
       <div className="actions">
-        <Link to="/reconciliation" className="lien-bouton">
-          Relever le solde
-        </Link>
-        <Link to={`/comptes/${compte.id}/modifier`} className="lien-bouton">
+        {compte.mode === 'saisi' && (
+          <Link to="/reconciliation" className="lien-bouton">
+            Relever le solde
+          </Link>
+        )}
+        <Link
+          to={`/comptes/${compte.id}/modifier`}
+          className={compte.mode === 'saisi' ? 'lien-bouton secondaire' : 'lien-bouton'}
+        >
           Modifier
         </Link>
       </div>
