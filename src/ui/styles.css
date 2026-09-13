@@ -10,7 +10,60 @@
  * porte un mot.
  */
 
+/*
+ * Deux palettes, un seul jeu de noms.
+ *
+ * Aucune couleur n'est écrite ailleurs que dans ces trois blocs : le reste de la
+ * feuille ne connaît que `--encre` ou `--fond-carte`, si bien qu'un thème
+ * s'ajoute sans relire une ligne de mise en page.
+ *
+ * L'ordre compte. La palette claire est posée sur `:root` nu, la sombre est
+ * reprise sous `prefers-color-scheme` — c'est le réglage du téléphone, et c'est
+ * le défaut. Les deux blocs `[data-theme]` viennent ensuite : un choix explicite
+ * doit l'emporter dans les deux sens, y compris « je veux clair alors que mon
+ * téléphone est en sombre ».
+ *
+ * Les deux palettes tiennent le même contraste : chaque encre est vérifiée à
+ * 4,5 au moins sur son fond, et l'audit d'accessibilité passe dans l'une comme
+ * dans l'autre.
+ */
 :root {
+  --fond: #f5f6f8;
+  --fond-carte: #ffffff;
+  --fond-enfonce: #eceff3;
+  --encre: #101828;
+  --encre-faible: #55607a;
+  --trait: #dde1e8;
+  --accent: #166534;
+  --accent-sombre: #bbf7d0;
+  --alerte: #be123c;
+  --attention: #a55a00;
+  --sur-accent: #ffffff;
+  --ombre-carte: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 4%);
+
+  color-scheme: light;
+}
+
+:root:not([data-theme='clair']) {
+  @media (prefers-color-scheme: dark) {
+    --fond: #0f172a;
+    --fond-carte: #1a243b;
+    --fond-enfonce: #131c2f;
+    --encre: #e8edf7;
+    --encre-faible: #9aa8c4;
+    --trait: #2b3a57;
+    --accent: #4ade80;
+    --accent-sombre: #2a5f48;
+    --alerte: #fb7185;
+    --attention: #fbbf24;
+    --sur-accent: #06210f;
+    --ombre-carte: none;
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='sombre'] {
   --fond: #0f172a;
   --fond-carte: #1a243b;
   --fond-enfonce: #131c2f;
@@ -21,13 +74,35 @@
   --accent-sombre: #2a5f48;
   --alerte: #fb7185;
   --attention: #fbbf24;
+  --sur-accent: #06210f;
+  --ombre-carte: none;
 
+  color-scheme: dark;
+}
+
+:root[data-theme='clair'] {
+  --fond: #f5f6f8;
+  --fond-carte: #ffffff;
+  --fond-enfonce: #eceff3;
+  --encre: #101828;
+  --encre-faible: #55607a;
+  --trait: #dde1e8;
+  --accent: #166534;
+  --accent-sombre: #bbf7d0;
+  --alerte: #be123c;
+  --attention: #a55a00;
+  --sur-accent: #ffffff;
+  --ombre-carte: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 4%);
+
+  color-scheme: light;
+}
+
+:root {
   --rayon: 0.875rem;
   --rayon-petit: 0.5rem;
   --gouttiere: 1.25rem;
   --barre-hauteur: 3.75rem;
 
-  color-scheme: dark;
   font-family:
     system-ui,
     -apple-system,
@@ -153,6 +228,7 @@ p a {
   border-radius: var(--rayon);
   padding: 0.875rem 1rem;
   margin-bottom: 0.75rem;
+  box-shadow: var(--ombre-carte);
 }
 
 .carte h2 {
@@ -356,7 +432,7 @@ a:focus-visible {
 
 button {
   background: var(--accent);
-  color: #06210f;
+  color: var(--sur-accent);
   border: none;
   border-radius: var(--rayon-petit);
   padding: 0.75rem 1.25rem;
@@ -818,7 +894,7 @@ button.secondaire {
   min-height: 2.75rem;
   text-align: center;
   background: var(--accent);
-  color: #06210f;
+  color: var(--sur-accent);
   border-radius: var(--rayon-petit);
   padding: 0.75rem 1.25rem;
   font-weight: 600;

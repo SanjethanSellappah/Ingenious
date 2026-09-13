@@ -26,7 +26,8 @@ un code de sortie non nul ou sur un problème annoncé dans la sortie.
 
 | Script | Vérifie |
 | --- | --- |
-| `a11y` | contraste AA, étiquettes, titres, repères, cibles tactiles — 16 écrans |
+| `a11y` | contraste AA, étiquettes, titres, repères, cibles tactiles — 16 écrans, thème sombre |
+| `a11y-clair` | le même audit dans le thème clair : deux palettes, un seul niveau d'exigence |
 | `a11y-verrou` | les cinq écrans de code, qu'aucune route ne permet d'atteindre |
 | `a11y-onboarding` | les trois étapes du démarrage à froid |
 | `debordement` | aucun débordement horizontal à 412 px |

@@ -4,6 +4,7 @@ import { formaterMontant, type Cents } from '../core/money'
 import { depotCourant, ecrire, recharger } from '../app/magasin'
 import { marquerExport, rappelSauvegarde } from '../app/automatismes'
 import { useEtat } from '../app/useEtat'
+import { choisirTheme, sabonnerTheme, themeChoisi, type Theme } from '../app/theme'
 import { labelsActifs, resoudreLabel, suggestionsLabels } from '../domain/labels'
 import { installationProposee, installer, sabonnerInstallation } from '../app/installation'
 import { PIN_LONGUEUR_RECOMMANDEE } from '../app/verrou'
@@ -233,6 +234,8 @@ export function Reglages({
         )}
       </div>
 
+      <Apparence />
+
       <GestionLabels />
 
       <div className="carte">
@@ -455,6 +458,40 @@ function CompteCourant({
             </option>
           ))}
         </select>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Choisir le thème.
+ *
+ * Trois états, dont « comme le téléphone » qui est le défaut : c'est lui qui
+ * suit la bascule automatique du système au coucher du soleil, et le retirer
+ * obligerait à venir rebasculer l'application deux fois par jour.
+ */
+function Apparence() {
+  const theme = useSyncExternalStore(sabonnerTheme, themeChoisi, () => 'systeme')
+  const choix: { valeur: Theme; libelle: string }[] = [
+    { valeur: 'systeme', libelle: 'Comme le téléphone' },
+    { valeur: 'clair', libelle: 'Clair' },
+    { valeur: 'sombre', libelle: 'Sombre' },
+  ]
+
+  return (
+    <div className="carte">
+      <h2>Apparence</h2>
+      <div className="segments" role="group" aria-label="Thème">
+        {choix.map(({ valeur, libelle }) => (
+          <button
+            key={valeur}
+            type="button"
+            aria-pressed={theme === valeur}
+            onClick={() => choisirTheme(valeur)}
+          >
+            {libelle}
+          </button>
+        ))}
       </div>
     </div>
   )

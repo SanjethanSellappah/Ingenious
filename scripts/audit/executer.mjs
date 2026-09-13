@@ -25,6 +25,7 @@ const LONGS = new Set(['volume', 'interruption'])
 
 const TOUS = [
   'a11y',
+  'a11y-clair',
   'a11y-verrou',
   'a11y-onboarding',
   'debordement',
@@ -158,7 +159,13 @@ if (!pret) {
 let echecs = 0
 for (const nom of choisis) {
   const debut = Date.now()
-  const resultat = await lancer('node', [join(ICI, `${nom}.mjs`), PORT])
+  // `a11y-clair` n'est pas un script : c'est le même audit dans l'autre thème.
+  // Les deux palettes doivent tenir le même contraste, et rien ne le garantit
+  // si l'on n'en mesure qu'une.
+  const clair = nom === 'a11y-clair'
+  const resultat = await lancer('node', [join(ICI, `${clair ? 'a11y' : nom}.mjs`), PORT], {
+    env: { ...process.env, THEME_AUDIT: clair ? 'clair' : 'sombre' },
+  })
   const secondes = ((Date.now() - debut) / 1000).toFixed(0)
   if (aEchoue(resultat)) {
     echecs += 1

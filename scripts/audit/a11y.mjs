@@ -2,9 +2,23 @@ import { chromium, devices } from 'playwright-core'
 import { optionsNavigateur } from './navigateur.mjs'
 const PORT = process.argv[2] ?? '4192'
 const nav = await chromium.launch(optionsNavigateur())
-const ctx = await nav.newContext({ ...devices['Pixel 7'] })
+const THEME = process.env.THEME_AUDIT ?? 'sombre'
+const ctx = await nav.newContext({
+  ...devices['Pixel 7'],
+  colorScheme: THEME === 'clair' ? 'light' : 'dark',
+})
 const page = await ctx.newPage()
+// Un thème imposé avant le premier rendu : c'est la palette qu'on veut auditer,
+// pas celle que le navigateur d'essai se trouve préférer.
+await page.addInitScript((theme) => {
+  try {
+    localStorage.setItem('ingenious.theme', theme)
+  } catch {
+    /* mémoire locale refusée : le thème du contexte suffit */
+  }
+}, THEME)
 const base = `http://localhost:${PORT}/Ingenious/`
+console.log(`thème audité : ${THEME}`)
 
 // Remplir l'application pour avoir du contenu à auditer.
 await page.goto(base + '#/', { waitUntil: 'networkidle' })
@@ -49,19 +63,49 @@ if (routeCompte) {
   routeMouvement = lienMvt ? lienMvt.slice(lienMvt.indexOf('#/')) : null
 }
 
-const contraste = (a, b) => {
-  const lum = (c) => {
-    const [r, g, bb] = c
-      .match(/\d+/g)
-      .slice(0, 3)
-      .map(Number)
-      .map((v) => {
-        const s = v / 255
-        return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
-      })
-    return 0.2126 * r + 0.7152 * g + 0.0722 * bb
+/*
+ * Contraste, en lisant vraiment la couleur.
+ *
+ * Une version antérieure attrapait les entiers d'une chaîne et prenait
+ * `color(srgb 1 1 1 / 0.85)` — du blanc presque opaque — pour trois canaux à 1
+ * sur 255, c'est-à-dire du noir. Elle annonçait 3,32 là où le contraste réel
+ * valait 6,3. Un détecteur qui se trompe de couleur ne mesure rien.
+ */
+const canaux = (couleur) => {
+  const srgb = /color\(\s*srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+))?/i.exec(couleur)
+  if (srgb) {
+    return [
+      Number(srgb[1]) * 255,
+      Number(srgb[2]) * 255,
+      Number(srgb[3]) * 255,
+      srgb[4] === undefined ? 1 : Number(srgb[4]),
+    ]
   }
-  const [l1, l2] = [lum(a), lum(b)].sort((x, y) => y - x)
+  const nombres = (couleur.match(/[\d.]+/g) ?? []).map(Number)
+  if (nombres.length < 3) return [0, 0, 0, 1]
+  return [nombres[0], nombres[1], nombres[2], nombres.length > 3 ? nombres[3] : 1]
+}
+
+/** Compose une couleur translucide sur son fond, comme le fait l'écran. */
+const composer = (dessus, dessous) => {
+  const [r1, g1, b1, a] = canaux(dessus)
+  if (a >= 1) return [r1, g1, b1]
+  const [r2, g2, b2] = canaux(dessous)
+  return [r1 * a + r2 * (1 - a), g1 * a + g2 * (1 - a), b1 * a + b2 * (1 - a)]
+}
+
+const luminance = ([r, g, b]) => {
+  const lin = (v) => {
+    const s = v / 255
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+  }
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+}
+
+const contraste = (texte, fond, fondDerriere = 'rgb(255,255,255)') => {
+  const surface = composer(fond, fondDerriere)
+  const encre = composer(texte, `rgb(${surface.join(',')})`)
+  const [l1, l2] = [luminance(encre), luminance(surface)].sort((x, y) => y - x)
   return (l1 + 0.05) / (l2 + 0.05)
 }
 
@@ -120,11 +164,27 @@ for (const route of routes) {
       .filter((el) => (el.textContent || '').trim() !== '')
       .map((el) => {
         const s = getComputedStyle(el)
-        let fond = 'rgb(15, 23, 42)'
+        // Le fond du document sert de dernier recours : une constante sombre
+        // écrite en dur mesurerait le thème clair contre le mauvais fond.
+        const dernier = getComputedStyle(document.documentElement).backgroundColor
+        const translucide = (c) => /\/\s*0?\.\d/.test(c) || /,\s*0?\.\d+\s*\)$/.test(c)
+        let fond = dernier
+        let derriere = dernier
+        let premier = true
         for (let n = el; n; n = n.parentElement) {
           const c = getComputedStyle(n).backgroundColor
-          if (c && c !== 'rgba(0, 0, 0, 0)') {
+          if (!c || c === 'rgba(0, 0, 0, 0)') continue
+          if (premier) {
             fond = c
+            premier = false
+            if (!translucide(c)) {
+              derriere = c
+              break
+            }
+            continue
+          }
+          if (!translucide(c)) {
+            derriere = c
             break
           }
         }
@@ -132,6 +192,7 @@ for (const route of routes) {
           texte: (el.textContent || '').trim().slice(0, 24),
           couleur: s.color,
           fond,
+          derriere,
           taille: parseFloat(s.fontSize),
           gras: s.fontWeight,
         }
@@ -161,7 +222,7 @@ for (const route of routes) {
   )
 
   for (const t of rapport.textes) {
-    const ratio = contraste(t.couleur, t.fond)
+    const ratio = contraste(t.couleur, t.fond, t.derriere)
     const gros = t.taille >= 24 || (t.taille >= 18.66 && Number(t.gras) >= 700)
     const seuil = gros ? 3 : 4.5
     if (ratio < seuil)
