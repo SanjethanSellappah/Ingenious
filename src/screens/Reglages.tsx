@@ -1,4 +1,5 @@
 import { useRef, useState, useSyncExternalStore } from 'react'
+import { Link } from 'react-router-dom'
 import { aujourdhui } from '../core/clock'
 import { formaterMontant, type Cents } from '../core/money'
 import { depotCourant, ecrire, recharger } from '../app/magasin'
@@ -179,6 +180,10 @@ export function Reglages({
             {message}
           </p>
         )}
+        <p className="discret">
+          Un relevé de banque n’est pas une sauvegarde : il s’importe ailleurs, avec un aperçu et
+          une détection des doublons. <Link to="/import-releve">Importer un relevé CSV</Link>
+        </p>
         {refus.length > 0 && (
           <div className="erreur-champ">
             <p>Ce qui a été refusé, et pourquoi :</p>

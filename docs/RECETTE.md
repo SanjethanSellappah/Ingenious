@@ -90,6 +90,41 @@ L'or est interrogé en `XAU/EUR` et ramené au gramme si c'est en grammes que vo
 comptez. **Vérifiez ce chiffre en premier** : une once fait 31,1 g, et une erreur
 d'unité se voit tout de suite.
 
+## 4 ter. L'import d'un relevé bancaire
+
+Les audits conduisent cet écran avec des fichiers fabriqués. Ce qu'ils ne
+peuvent pas éprouver, c'est le CSV que votre banque produit vraiment : les noms
+de colonnes, le séparateur, l'encodage, le format des dates. C'est la seule
+inconnue de cette fonctionnalité.
+
+- [ ] Exporter un relevé au format CSV depuis le site de votre banque, sur une
+      période **déjà réconciliée**.
+- [ ] **Comptes → Importer un relevé CSV.** Choisir le compte, puis le fichier.
+- [ ] Vérifier la ligne qui annonce le fichier : nombre de lignes, séparateur,
+      encodage. Si le nombre de lignes ne correspond pas, le séparateur a été mal
+      deviné — dites-le, c'est corrigeable.
+- [ ] Vérifier les **colonnes devinées**, et les corriger au besoin. Vérifier
+      surtout qu'un montant d'exemple s'affiche correctement.
+- [ ] Lire l'aperçu **avant** d'importer : le nombre d'opérations, les dates
+      extrêmes, et les encarts qui apparaissent.
+- [ ] Si un encart **« Écarts de réconciliation »** apparaît, c'est normal et
+      c'est le point important : l'écart « Non catégorisé » résume déjà les
+      dépenses que le fichier apporte en détail. Laisser la case cochée.
+- [ ] Importer. Vérifier ensuite dans **Dépenses** que le total du mois n'a pas
+      doublé.
+- [ ] **Réimporter exactement le même fichier.** L'aperçu doit annoncer
+      **0 opération** et dire que les lignes sont déjà connues. Si un seul
+      doublon apparaît, arrêtez-vous là et signalez-le.
+- [ ] Exporter un fichier **plus large** (deux mois au lieu d'un) qui recouvre le
+      premier. Seules les lignes nouvelles doivent être annoncées.
+- [ ] Vérifier les **accents** dans les libellés importés. Un « RETRAIT DÉCEMBRE »
+      devenu illisible veut dire que l'encodage a été mal lu.
+
+Si un encart **« Sans effet sur le solde »** apparaît, ce n'est pas une panne :
+le solde part de votre dernier relevé et n'additionne que ce qui vient après.
+Des lignes plus anciennes enrichissent l'historique et les totaux par poste sans
+déplacer le solde.
+
 ## 5. Deux appareils
 
 - [ ] Installer aussi sur un second appareil, ou dans un autre navigateur.
@@ -98,6 +133,10 @@ d'unité se voit tout de suite.
 - [ ] Échanger les exports dans les deux sens.
 - [ ] Les deux doivent afficher **exactement le même solde** et les mêmes
       mouvements, sans doublon.
+- [ ] Importer **le même relevé CSV sur les deux appareils**, séparément, puis
+      échanger les exports. Les lignes ne doivent apparaître **qu'une fois** :
+      leur identifiant est dérivé de leur contenu, il est donc le même des deux
+      côtés.
 
 ## 6. L'usage réel, sur quelques semaines
 

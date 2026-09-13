@@ -90,6 +90,22 @@ Une application non ouverte ne rappelle rien : le rappel de sauvegarde arrive à
 l'ouverture suivante. C'est mieux que rien, et il vaut mieux le dire que promettre
 une régularité qu'on ne peut pas tenir.
 
+## Import d'un relevé bancaire
+
+Un CSV de banque n'a pas d'identifiant d'événement, et le journal est en ajout
+seul : l'erreur possible n'est donc pas la perte, c'est le **doublon**. Chaque
+ligne reçoit un identifiant **dérivé de son contenu** (compte, date, montant,
+libellé normalisé, et le rang parmi les lignes indiscernables), de sorte que le
+même relevé réimporté — ou importé depuis un second appareil — est reconnu par
+la même union sur `id` que pour un journal.
+
+Restent deux effets qu'aucune empreinte ne peut trancher seule, et qui sont
+donc **montrés avant d'écrire** : les lignes qui ressemblent à une saisie déjà
+présente, et les écarts de réconciliation, qui résument déjà les dépenses non
+saisies de la période qu'on importe. Un écart recouvert est proposé à la
+suppression ; le supprimer ne déplace pas le solde — il était derrière l'ancre
+qui l'a suivi — mais rétablit les totaux du mois.
+
 ## Ce que le code garantit, et ce qu'il ne garantit pas
 
 - Le **code de verrouillage** chiffre les données de l'appareil. Il protège de
@@ -119,6 +135,7 @@ application peut être fermée pendant.
 
 ## État
 
-Phase 1 livrée : lots 0 à 7. La phase 2 — mode `calculé`, cours de bourse,
-synchronisation automatique, import CSV, suivi fiscal, vue à douze mois — est
-hors périmètre et décrite au §9 du contexte.
+Phase 1 livrée : lots 0 à 7. S'y ajoutent, pris sur la phase 2, le mode
+`calculé` avec les cours de bourse et l'**import CSV de relevés bancaires**. Le
+reste de la phase 2 — synchronisation automatique, suivi fiscal, vue à douze
+mois — est hors périmètre et décrit au §9 du contexte.

@@ -68,6 +68,22 @@ export type Evenement = {
   payload: Record<string, unknown>
 }
 
+/**
+ * Une écriture demandée au journal.
+ *
+ * L'`id` est presque toujours absent : le dépôt en tire un au hasard, et deux
+ * saisies ne peuvent pas se confondre. Il n'est fourni que lorsque l'événement
+ * doit être **reconnaissable** — une ligne de relevé bancaire, qui doit porter
+ * le même identifiant quel que soit l'appareil qui l'importe et le nombre de
+ * fois qu'on l'importe. C'est ce qui fait qu'un réimport n'ajoute rien.
+ */
+export type EntreeJournal = {
+  type: TypeEvenement
+  payload: Record<string, unknown>
+  /** UUID imposé. Un événement déjà présent sous cet `id` n'est pas réécrit. */
+  id?: string
+}
+
 /** Enveloppe d'export. L'en-tête reste lisible même quand le contenu est chiffré. */
 export const FORMAT_JOURNAL = 'ingenious.journal'
 export const VERSION_JOURNAL = 1

@@ -9,6 +9,9 @@
  * lisant ses tests. C'est pourquoi ils sont versionnés ici plutôt que jetés
  * après usage.
  *
+ * Le site est **reconstruit** à chaque lancement, et un échec de compilation
+ * arrête tout : `vite preview` sert `dist/`, pas les sources.
+ *
  *   npm run audit          les audits rapides
  *   npm run audit -- --tous   tout, y compris les longs
  *   npm run audit -- a11y fusion   ceux qu'on nomme
@@ -37,6 +40,7 @@ const TOUS = [
   'stockage',
   'reverrou',
   'reconciliation',
+  'releve',
   'extremes',
   'installation',
   'signales',
@@ -114,6 +118,39 @@ if (await repond()) {
   process.exit(1)
 }
 
+const RACINE = join(ICI, '..', '..')
+
+/*
+ * Le site est reconstruit avant d'être audité, et un échec arrête tout.
+ *
+ * `vite preview` sert `dist/`, pas les sources : sans cette reconstruction, une
+ * modification qui ne compile pas laisse le dossier intact, et les audits
+ * examinent tranquillement la version d'avant. Ils passent — et ils ne
+ * prouvent rien. Le cas s'est produit ici même : une faute délibérée, posée
+ * pour vérifier qu'un audit savait la voir, a fait échouer `tsc` sans que rien
+ * ne le dise, et l'audit l'a « réussie ».
+ */
+const compilation = await lancer(
+  process.execPath,
+  [join(RACINE, 'node_modules', 'typescript', 'bin', 'tsc'), '--noEmit'],
+  { cwd: RACINE },
+)
+if (compilation.code !== 0) {
+  console.error('La compilation échoue : les audits porteraient sur la version précédente.\n')
+  console.error(compilation.sortie.trim().split('\n').slice(0, 12).join('\n'))
+  process.exit(1)
+}
+const construction = await lancer(
+  process.execPath,
+  [join(RACINE, 'node_modules', 'vite', 'bin', 'vite.js'), 'build'],
+  { cwd: RACINE },
+)
+if (construction.code !== 0) {
+  console.error('La construction échoue : les audits porteraient sur la version précédente.\n')
+  console.error(construction.sortie.trim().split('\n').slice(-12).join('\n'))
+  process.exit(1)
+}
+
 /*
  * Vite est lancé directement, pas par `npx`.
  *
@@ -121,7 +158,6 @@ if (await repond()) {
  * le port et fait échouer la fois suivante — ou pire, sert une version périmée
  * du site à des audits qui croient tester la nouvelle.
  */
-const RACINE = join(ICI, '..', '..')
 const serveur = spawn(
   process.execPath,
   [

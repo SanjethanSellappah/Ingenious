@@ -67,6 +67,12 @@ export function Comptes() {
         </Link>
       </div>
 
+      <div className="actions">
+        <Link to="/import-releve" className="lien-bouton secondaire">
+          Importer un relevé CSV
+        </Link>
+      </div>
+
       <GroupeComptes titre="Bancaire" comptes={bancaires} etat={etat} jour={jour} />
       <GroupeComptes titre="Investissement" comptes={investissements} etat={etat} jour={jour} />
 

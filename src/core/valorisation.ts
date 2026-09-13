@@ -56,10 +56,7 @@ export type Valorisation = {
  * « À une date donnée » et non « le dernier tout court » : relire le patrimoine
  * du mois dernier avec les cours d'aujourd'hui donnerait une histoire fausse.
  */
-export function coursValideA(
-  cours: readonly CoursConnu[],
-  jusqua: CivilDate,
-): CoursConnu | null {
+export function coursValideA(cours: readonly CoursConnu[], jusqua: CivilDate): CoursConnu | null {
   let retenu: CoursConnu | null = null
   for (const releve of cours) {
     if (releve.date > jusqua) continue

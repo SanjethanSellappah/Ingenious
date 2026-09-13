@@ -13,14 +13,18 @@ visible depuis une assertion sur une fonction pure.
 ## Lancer
 
 ```sh
-npm run build        # les audits visitent le site construit
 npm run audit        # les audits rapides, environ trois minutes
 npm run audit -- --tous        # tout, y compris volume et interruption
 npm run audit -- a11y fusion   # ceux qu'on nomme
 ```
 
-Le lanceur démarre `vite preview`, exécute chaque script, et déclare l'échec sur
-un code de sortie non nul ou sur un problème annoncé dans la sortie.
+Le lanceur **reconstruit le site**, démarre `vite preview`, exécute chaque
+script, et déclare l'échec sur un code de sortie non nul ou sur un problème
+annoncé dans la sortie. La reconstruction n'est pas une commodité : `vite
+preview` sert `dist/`, donc une modification qui ne compile pas laisserait le
+dossier intact et les audits examineraient tranquillement la version d'avant.
+Une compilation en échec arrête tout, plutôt que de produire des succès qui ne
+prouvent rien.
 
 ## Ce que chacun vérifie
 
@@ -38,6 +42,7 @@ un code de sortie non nul ou sur un problème annoncé dans la sortie.
 | `panne` | disque qui refuse d'écrire : le bandeau, son contraste, son effacement |
 | `stockage` | IndexedDB absent, quota dépassé, `localStorage` bloqué |
 | `reverrou` | reverrouillage après deux minutes en arrière-plan, pas avant |
+| `releve` | import CSV : réimport sans effet, écart de réconciliation retiré, Windows-1252, compte créé en cours de route |
 | `reconciliation` | l'écart, son absence de double comptage, une dépense saisie après l'ancre |
 | `extremes` | noms de 68 caractères, montants à sept chiffres, saisies absurdes, soldes négatifs |
 | `installation` | le bouton d'installation : proposé, consommé une fois, absent quand elle est faite |

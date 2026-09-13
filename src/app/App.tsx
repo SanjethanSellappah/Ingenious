@@ -11,6 +11,7 @@ import { FormulaireCompte } from '../screens/FormulaireCompte'
 import { Labels } from '../screens/Labels'
 import { Mouvement } from '../screens/Mouvement'
 import { Onboarding } from '../screens/Onboarding'
+import { ImportReleve } from '../screens/ImportReleve'
 import { Reconciliation } from '../screens/Reconciliation'
 import { Reglages } from '../screens/Reglages'
 import { BarreOnglets } from '../ui/BarreOnglets'
@@ -254,6 +255,7 @@ function Contenu({
         <Route path="/depenses" element={<Labels />} />
         <Route path="/mouvements/:id" element={<Mouvement />} />
         <Route path="/reconciliation" element={<Reconciliation />} />
+        <Route path="/import-releve" element={<ImportReleve />} />
         <Route path="/confirmer" element={<Confirmer />} />
         <Route
           path="/reglages"

@@ -9,7 +9,7 @@
  * `useSyncExternalStore` suffit : aucune dépendance, et un seul chemin d'écriture.
  */
 import { plier, type Etat, etatVide } from '../domain/etat'
-import type { Evenement, TypeEvenement } from '../domain/events'
+import type { EntreeJournal, Evenement } from '../domain/events'
 import type { Depot } from '../storage/repository'
 
 export type EtatApplication = {
@@ -117,9 +117,7 @@ export async function recharger(): Promise<void> {
  * qu'une saisie disparaisse en silence. L'erreur continue d'être relancée, de
  * sorte qu'un écran qui sait quoi en dire le dise encore.
  */
-export async function ecrire(
-  entrees: readonly { type: TypeEvenement; payload: Record<string, unknown> }[],
-): Promise<Evenement[]> {
+export async function ecrire(entrees: readonly EntreeJournal[]): Promise<Evenement[]> {
   if (!depot) throw new Error('Aucun dépôt branché')
   let ecrits: Evenement[]
   try {

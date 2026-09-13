@@ -18,6 +18,7 @@ import {
   validerEvenements,
   VERSION_JOURNAL,
   type Evenement,
+  type EntreeJournal,
   type JournalExporte,
   type TypeEvenement,
 } from '../domain/events'
@@ -29,9 +30,7 @@ export type Depot = {
   /** Écrit un événement neuf dans le journal. */
   ajouter: (type: TypeEvenement, payload: Record<string, unknown>) => Promise<Evenement>
   /** Écrit plusieurs événements d'un coup, dans l'ordre donné. */
-  ajouterPlusieurs: (
-    entrees: readonly { type: TypeEvenement; payload: Record<string, unknown> }[],
-  ) => Promise<Evenement[]>
+  ajouterPlusieurs: (entrees: readonly EntreeJournal[]) => Promise<Evenement[]>
   /** Relit tout le journal, trié, avec la liste de ce qui n'a pas pu être relu. */
   chargerTout: () => Promise<{
     evenements: Evenement[]
@@ -83,24 +82,41 @@ export async function ouvrirDepot(
     await base.events.bulkPut(enregistrements)
   }
 
-  async function ajouterPlusieurs(
-    entrees: readonly { type: TypeEvenement; payload: Record<string, unknown> }[],
-  ): Promise<Evenement[]> {
+  async function ajouterPlusieurs(entrees: readonly EntreeJournal[]): Promise<Evenement[]> {
     const instant = maintenant()
     const evenements = entrees.map((entree, rang) =>
       // Le rang décale l'instant d'une milliseconde : deux événements écrits dans
       // la même passe doivent rester ordonnables entre eux, et la réconciliation
       // en dépend — l'écart doit se poser avant la nouvelle ancre de solde.
       validerEvenement({
-        id: crypto.randomUUID(),
+        id: entree.id ?? crypto.randomUUID(),
         ts: instant + rang,
         device: appareil,
         type: entree.type,
         payload: entree.payload,
       }),
     )
-    await ecrire(evenements)
-    return evenements
+
+    // Un identifiant imposé peut déjà exister — c'est même tout l'intérêt d'un
+    // relevé réimporté. Le journal est en ajout seul : on n'écrase pas, on
+    // n'écrit que ce qui manque. Sans ce filtre, `bulkPut` remplacerait
+    // l'événement d'origine par une copie à un autre instant, et l'ordre du
+    // journal changerait sous les pieds d'un calcul qui en dépend.
+    const imposes = evenements.filter((_, rang) => entrees[rang]!.id !== undefined).map((e) => e.id)
+    const connus = new Set<string>()
+    if (imposes.length > 0) {
+      for (const enregistrement of await base.events.bulkGet(imposes)) {
+        if (enregistrement) connus.add(enregistrement.id)
+      }
+    }
+    const nouveaux = evenements.filter((evenement) => {
+      if (connus.has(evenement.id)) return false
+      connus.add(evenement.id)
+      return true
+    })
+
+    await ecrire(nouveaux)
+    return nouveaux
   }
 
   async function chargerTout(): Promise<{

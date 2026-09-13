@@ -217,3 +217,71 @@ describe('enveloppe d’export', () => {
     ).toEqual([])
   })
 })
+
+describe('identifiant imposé', () => {
+  const ligne = (id: string, date: string, montant: number) => ({
+    id,
+    type: 'transaction.created' as const,
+    payload: {
+      id: `csv-${id.slice(0, 6)}`,
+      account_id: 'c1',
+      date,
+      montant_cents: montant,
+      origine: 'csv',
+      note: 'CB BOULANGERIE',
+    },
+  })
+
+  const UN = '5f1b2c3d-4e5f-5a6b-8c9d-0e1f2a3b4c5d'
+  const DEUX = '6a2c3d4e-5f6a-5b7c-9d8e-1f2a3b4c5d6e'
+
+  it('écrit l’événement sous l’identifiant demandé', async () => {
+    const { depot } = await depotNeuf()
+    await depot.ajouter('account.created', { ...compte })
+    const ecrits = await depot.ajouterPlusieurs([ligne(UN, '2025-09-01', -250)])
+    expect(ecrits.map((e) => e.id)).toEqual([UN])
+  })
+
+  it('n’ajoute rien la seconde fois — c’est ce qui rend un réimport sans effet', async () => {
+    const { depot } = await depotNeuf()
+    await depot.ajouter('account.created', { ...compte })
+    await depot.ajouterPlusieurs([ligne(UN, '2025-09-01', -250), ligne(DEUX, '2025-09-03', 200000)])
+
+    const second = await depot.ajouterPlusieurs([
+      ligne(UN, '2025-09-01', -250),
+      ligne(DEUX, '2025-09-03', 200000),
+    ])
+    expect(second).toEqual([])
+    const { evenements } = await depot.chargerTout()
+    expect(evenements.filter((e) => e.type === 'transaction.created')).toHaveLength(2)
+  })
+
+  it('ne réécrit pas l’événement d’origine, même à instant différent', async () => {
+    // `bulkPut` remplacerait la version stockée : l'ordre du journal changerait
+    // sous les pieds d'un calcul qui en dépend, sans que rien ne le signale.
+    const { depot } = await depotNeuf()
+    await depot.ajouter('account.created', { ...compte })
+    const [premier] = await depot.ajouterPlusieurs([ligne(UN, '2025-09-01', -250)])
+    await depot.ajouterPlusieurs([ligne(UN, '2025-09-01', -250)])
+    const { evenements } = await depot.chargerTout()
+    const relu = evenements.find((e) => e.id === UN)
+    expect(relu?.ts).toBe(premier!.ts)
+  })
+
+  it('n’écrit qu’une fois un identifiant répété dans la même passe', async () => {
+    const { depot } = await depotNeuf()
+    await depot.ajouter('account.created', { ...compte })
+    const ecrits = await depot.ajouterPlusieurs([
+      ligne(UN, '2025-09-01', -250),
+      ligne(UN, '2025-09-01', -250),
+    ])
+    expect(ecrits).toHaveLength(1)
+  })
+
+  it('tire un identifiant au hasard quand aucun n’est imposé', async () => {
+    const { depot } = await depotNeuf()
+    const a = await depot.ajouter('account.created', { ...compte })
+    const b = await depot.ajouter('account.updated', { id: 'c1', nom: 'Courant bis' })
+    expect(a.id).not.toBe(b.id)
+  })
+})
