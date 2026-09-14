@@ -34,7 +34,7 @@
  * s'écrire sur un fond clair. Sur fond sombre les deux se confondent, l'ambre
  * vif se lisant très bien sur du charbon.
  *
- * L'accent est ambre, ce qui oblige aussi à redistribuer deux rôles :
+ * L'accent est ambre, ce qui oblige aussi à répartir trois rôles :
  *
  * - `--attention` valait déjà l'ambre. Garder deux ambres différents pour
  *   « voici l'action » et « attention » n'aurait distingué personne : ils sont
@@ -44,6 +44,16 @@
  *   corail, sur fond clair au brique : dans les deux cas on ne peut pas la
  *   confondre avec l'or, ce qui est le seul point qui compte pour une couleur
  *   qui annonce une perte.
+ * - `--gain` est **vert, et le reste**. Un salaire, un remboursement, une
+ *   rentrée : c'est la convention de tous les relevés bancaires, et l'ambre ne
+ *   pouvait pas la remplacer sans faire ressembler une bonne nouvelle à une
+ *   invitation à agir. Vert sapin sur fond clair, vert pré sur fond sombre.
+ *
+ * Aucune de ces trois couleurs ne porte seule son information : le signe est
+ * toujours écrit et doublé d'une flèche (voir `Montant.tsx`). C'est ce qui
+ * permet de choisir le vert et l'ambre sans se demander comment les distingue
+ * quelqu'un qui confond le rouge et le vert — la réponse est qu'il lit « + »
+ * et « ↑ », comme tout le monde.
  */
 /*
  * Inter, embarquée.
@@ -79,6 +89,7 @@
   --accent-encre: #7a5300;
   --accent-sombre: #fbeecd;
   --alerte: #b4291b;
+  --gain: #106b38;
   --attention: #7a5300;
   --sur-accent: #2a1d02;
   --ombre-carte: 0 1px 2px rgb(60 45 15 / 7%), 0 2px 8px rgb(60 45 15 / 5%);
@@ -98,6 +109,7 @@
     --accent-encre: #f5b93f;
     --accent-sombre: #3d300f;
     --alerte: #ff8a7a;
+    --gain: #3ddc84;
     --attention: #f5b93f;
     --sur-accent: #2a1d02;
     --ombre-carte: none;
@@ -117,6 +129,7 @@
   --accent-encre: #f5b93f;
   --accent-sombre: #3d300f;
   --alerte: #ff8a7a;
+  --gain: #3ddc84;
   --attention: #f5b93f;
   --sur-accent: #2a1d02;
   --ombre-carte: none;
@@ -135,6 +148,7 @@
   --accent-encre: #7a5300;
   --accent-sombre: #fbeecd;
   --alerte: #b4291b;
+  --gain: #106b38;
   --attention: #7a5300;
   --sur-accent: #2a1d02;
   --ombre-carte: 0 1px 2px rgb(60 45 15 / 7%), 0 2px 8px rgb(60 45 15 / 5%);
@@ -385,7 +399,7 @@ h1 > .icone {
 }
 
 .montant-entree {
-  color: var(--accent-encre);
+  color: var(--gain);
 }
 
 .montant-principal {
@@ -936,7 +950,7 @@ button.secondaire {
 }
 
 .pastille.entree {
-  color: var(--accent-encre);
+  color: var(--gain);
 }
 
 /* --- Dépenses par label --------------------------------------------------- */
