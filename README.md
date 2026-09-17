@@ -92,7 +92,31 @@ une régularité qu'on ne peut pas tenir.
 
 ## Import d'un relevé bancaire
 
-Un CSV de banque n'a pas d'identifiant d'événement, et le journal est en ajout
+Quatre formats : **CSV**, **Excel** (`.xlsx` et `.xls`), et **PDF**. Le format
+est reconnu à ses octets, jamais à son extension — une banque qui nomme `.xls`
+un fichier qui est du CSV ne doit pas rendre l'import incompréhensible.
+
+Les quatre lectures produisent la même chose : une grille de chaînes. Tout ce
+qui suit — correspondance des colonnes, dates, montants, empreinte, aperçu —
+ignore d'où viennent les lignes. C'est pourquoi la détection des doublons vaut
+d'un format à l'autre : **le même relevé importé en Excel puis en PDF n'ajoute
+rien la seconde fois**, l'empreinte étant tirée du contenu et non du fichier.
+
+Les quatre lecteurs sont écrits ici, sans dépendance : le navigateur sait
+décompresser (`DecompressionStream`), et le reste est du décodage. Les
+bibliothèques habituelles auraient ajouté plus de deux mégaoctets à une
+application qui en fait six cents kilo-octets ; ces lecteurs en coûtent
+vingt-six, et se relisent.
+
+Ce qu'ils ne font pas, et qui est dit à l'écran plutôt que découvert : **un PDF
+scanné ne donne rien**. Une photo de relevé ne contient pas de texte, et il n'y
+a pas de reconnaissance de caractères. Un PDF a par ailleurs beau ressembler à
+un tableau, il n'en contient pas : les colonnes sont retrouvées en regardant où
+la plupart des lignes se taisent. D'où l'aperçu, colonne par colonne, avant
+toute écriture.
+
+
+Un relevé de banque n'a pas d'identifiant d'événement, et le journal est en ajout
 seul : l'erreur possible n'est donc pas la perte, c'est le **doublon**. Chaque
 ligne reçoit un identifiant **dérivé de son contenu** (compte, date, montant,
 libellé normalisé, et le rang parmi les lignes indiscernables), de sorte que le

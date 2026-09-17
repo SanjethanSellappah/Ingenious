@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { chromium, devices } from 'playwright-core'
 import { optionsNavigateur } from './navigateur.mjs'
 
@@ -14,6 +15,10 @@ import { optionsNavigateur } from './navigateur.mjs'
  *   double comptage est invisible : les totaux gonflent sans que rien n'alerte.
  * - **Un accent codé sur un octet reste un accent.** Un libellé abîmé change
  *   l'empreinte, donc la reconnaissance des doublons, en silence.
+ * - **Les quatre formats arrivent au même endroit.** CSV, Excel moderne, Excel
+ *   97 et PDF sont lus par quatre codes très différents ; c'est ici qu'on
+ *   vérifie qu'ils produisent les mêmes lignes dans la vraie application, et
+ *   qu'importer le même relevé sous deux formats n'ajoute rien la seconde fois.
  */
 const PORT = process.argv[2] ?? '4192'
 const base = `http://localhost:${PORT}/Ingenious/`
@@ -204,6 +209,103 @@ dit('14.', 'comptes : ' + comptes.slice(0, 120))
 exiger(/Second compte/.test(comptes), 'le compte créé pendant l’import n’existe pas')
 // 0 de départ, moins 2,50 deux fois, moins 40, plus 15,80.
 exiger(/29,20/.test(comptes), 'le solde du compte créé ne reflète pas les lignes importées')
+
+// --- Les trois autres formats, dans la vraie application ---------------------------
+
+const fixture = (nom) =>
+  readFileSync(new URL(`../../src/core/__fixtures__/${nom}`, import.meta.url))
+
+async function deposerFichier(nom, type) {
+  await page.setInputFiles('input[type=file]', {
+    name: nom,
+    mimeType: type,
+    buffer: fixture(nom),
+  })
+  await page.waitForTimeout(900)
+}
+
+/** Ouvre l'écran d'import sur un compte neuf, et rend son nom. */
+async function comptePourImport(nom) {
+  await page.goto(base + '#/import-releve', { waitUntil: 'networkidle' })
+  await page.selectOption('#compte-import', '__nouveau__')
+  await page.fill('#nom-nouveau-compte', nom)
+  return nom
+}
+
+const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+
+await comptePourImport('Compte Excel')
+await deposerFichier('releve.xlsx', XLSX)
+const excel = (await page.locator('body').innerText()).replace(/\s+/g, ' ')
+dit(
+  '15.',
+  'classeur lu : ' + (/releve\.xlsx[^A-Z]*/.exec(excel)?.[0]?.trim().slice(0, 70) ?? '(rien)'),
+)
+exiger(/Excel \(\.xlsx\)/.test(excel), 'le format .xlsx n’a pas été annoncé')
+exiger(
+  /Feuille/.test(excel),
+  'le choix de la feuille n’est pas proposé pour un classeur à deux feuilles',
+)
+const feuille = await page.locator('#feuille-import').inputValue()
+exiger(feuille === '0', `la feuille des opérations devait être proposée, choisie : ${feuille}`)
+const aEcrireExcel = (await page.locator('.montant-principal').first().textContent())?.trim()
+dit('16.', 'opérations annoncées depuis le .xlsx : ' + aEcrireExcel)
+exiger(aEcrireExcel === '8', `8 opérations attendues depuis le classeur, annoncé ${aEcrireExcel}`)
+await page.click('button:has-text("Importer")')
+await page.waitForTimeout(1300)
+
+// Le même relevé, en PDF : rien ne doit s'ajouter une seconde fois.
+await page.goto(base + '#/import-releve', { waitUntil: 'networkidle' })
+await page.selectOption('#compte-import', { label: 'Compte Excel' })
+await deposerFichier('releve-banque.pdf', 'application/pdf')
+const pdf = (await page.locator('body').innerText()).replace(/\s+/g, ' ')
+dit('17.', 'PDF lu : ' + (/PDF ·[^·]*·[^·]*/.exec(pdf)?.[0]?.trim() ?? '(rien)'))
+exiger(/PDF/.test(pdf), 'le format PDF n’a pas été annoncé')
+const aEcrirePdf = (await page.locator('.montant-principal').first().textContent())?.trim()
+dit('18.', 'opérations annoncées depuis le PDF du même relevé : ' + aEcrirePdf)
+exiger(
+  aEcrirePdf === '0',
+  `le même relevé en PDF devait être reconnu, ${aEcrirePdf} opération(s) annoncée(s)`,
+)
+exiger(/déjà importée/.test(pdf), 'le PDF du même relevé n’est pas reconnu comme déjà importé')
+
+// Le format binaire de 1997, sur un compte neuf : les huit opérations reviennent.
+await comptePourImport('Compte Excel 97')
+await deposerFichier('releve.xls', 'application/vnd.ms-excel')
+const ancien = (await page.locator('body').innerText()).replace(/\s+/g, ' ')
+dit('19.', 'classeur 97 : ' + (/Excel 97[^·]*·[^·]*/.exec(ancien)?.[0]?.trim() ?? '(rien)'))
+exiger(/Excel 97/.test(ancien), 'le format .xls n’a pas été annoncé')
+const aEcrireAncien = (await page.locator('.montant-principal').first().textContent())?.trim()
+dit('20.', 'opérations annoncées depuis le .xls : ' + aEcrireAncien)
+exiger(aEcrireAncien === '8', `8 opérations attendues depuis le .xls, annoncé ${aEcrireAncien}`)
+await page.click('button:has-text("Importer")')
+await page.waitForTimeout(1300)
+
+await page.goto(base + '#/comptes', { waitUntil: 'networkidle' })
+await page.waitForTimeout(600)
+const tousComptes = (await page.locator('body').innerText()).replace(/\s+/g, ' ')
+dit('21.', 'comptes : ' + tousComptes.slice(0, 140))
+// Les huit opérations du relevé font +41,04 € : deux comptes partis de zéro,
+// nourris l'un par le classeur moderne et l'autre par le format de 1997,
+// doivent tomber exactement sur le même chiffre.
+const soldes = [...tousComptes.matchAll(/41,04/g)]
+dit('22.', 'comptes au solde attendu (41,04 €) : ' + soldes.length)
+exiger(
+  soldes.length >= 2,
+  `les deux comptes devaient valoir 41,04 € ; trouvé ${soldes.length} fois`,
+)
+
+// Un fichier qui n'est aucun des quatre doit être refusé en le disant.
+await page.goto(base + '#/import-releve', { waitUntil: 'networkidle' })
+await page.setInputFiles('input[type=file]', {
+  name: 'photo.png',
+  mimeType: 'image/png',
+  buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 1, 2, 3, 4, 5, 6, 7]),
+})
+await page.waitForTimeout(700)
+const refus = (await page.locator('[role=alert]').first().textContent())?.trim() ?? ''
+dit('23.', 'fichier d’un autre genre : ' + refus.slice(0, 90))
+exiger(/Formats acceptés/.test(refus), 'un fichier illisible n’explique pas ce qui est accepté')
 
 console.log('\nproblèmes :', problemes.length ? problemes.join('\n  ') : 'aucun')
 console.log('erreurs :', erreurs.length ? [...new Set(erreurs)].slice(0, 4).join(' | ') : 'aucune')

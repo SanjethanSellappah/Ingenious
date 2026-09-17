@@ -42,7 +42,7 @@ prouvent rien.
 | `panne` | disque qui refuse d'écrire : le bandeau, son contraste, son effacement |
 | `stockage` | IndexedDB absent, quota dépassé, `localStorage` bloqué |
 | `reverrou` | reverrouillage après deux minutes en arrière-plan, pas avant |
-| `releve` | import CSV : réimport sans effet, écart de réconciliation retiré, Windows-1252, compte créé en cours de route |
+| `releve` | import CSV, Excel (.xlsx et .xls) et PDF : réimport sans effet, même relevé reconnu d'un format à l'autre, écart de réconciliation retiré, Windows-1252, compte créé en cours de route |
 | `reconciliation` | l'écart, son absence de double comptage, une dépense saisie après l'ancre |
 | `extremes` | noms de 68 caractères, montants à sept chiffres, saisies absurdes, soldes négatifs |
 | `installation` | le bouton d'installation : proposé, consommé une fois, absent quand elle est faite |

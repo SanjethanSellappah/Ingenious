@@ -92,13 +92,17 @@ d'unité se voit tout de suite.
 
 ## 4 ter. L'import d'un relevé bancaire
 
-Les audits conduisent cet écran avec des fichiers fabriqués. Ce qu'ils ne
-peuvent pas éprouver, c'est le CSV que votre banque produit vraiment : les noms
-de colonnes, le séparateur, l'encodage, le format des dates. C'est la seule
-inconnue de cette fonctionnalité.
+Quatre formats sont acceptés : CSV, Excel (`.xlsx` et `.xls`) et PDF. Les audits
+conduisent cet écran avec de vrais fichiers de chaque format, mais fabriqués
+ici. Ce qu'ils ne peuvent pas éprouver, c'est le fichier que **votre** banque
+produit : les noms de colonnes, le séparateur, l'encodage, la mise en page du
+PDF. C'est la seule inconnue de cette fonctionnalité.
 
-- [ ] Exporter un relevé au format CSV depuis le site de votre banque, sur une
-      période **déjà réconciliée**.
+Commencez par le CSV s'il est proposé : c'est le format le plus sûr des quatre,
+parce que les colonnes y sont déclarées au lieu d'être devinées.
+
+- [ ] Exporter un relevé depuis le site de votre banque, sur une période **déjà
+      réconciliée**.
 - [ ] **Comptes → Importer un relevé CSV.** Choisir le compte, puis le fichier.
 - [ ] Vérifier la ligne qui annonce le fichier : nombre de lignes, séparateur,
       encodage. Si le nombre de lignes ne correspond pas, le séparateur a été mal
@@ -119,6 +123,25 @@ inconnue de cette fonctionnalité.
       premier. Seules les lignes nouvelles doivent être annoncées.
 - [ ] Vérifier les **accents** dans les libellés importés. Un « RETRAIT DÉCEMBRE »
       devenu illisible veut dire que l'encodage a été mal lu.
+
+### Les autres formats
+
+- [ ] Recommencer avec le même relevé en **Excel**, s'il est proposé. Vérifier
+      surtout les **dates** : dans un classeur, une date est un nombre, et c'est
+      son format qui dit qu'il faut la lire comme une date. Une colonne de dates
+      affichée « 46266 » veut dire que ce format n'a pas été reconnu — dites-le.
+- [ ] Si le classeur a plusieurs feuilles, vérifier que c'est bien celle des
+      opérations qui est proposée, et changer au besoin.
+- [ ] Recommencer avec le **PDF** du même relevé. C'est le format le plus
+      incertain : un PDF ne contient pas de tableau, les colonnes sont retrouvées
+      d'après les alignements. Regarder l'aperçu ligne à ligne avant d'importer.
+- [ ] Après avoir importé le relevé dans un format, **importer le même relevé
+      dans un autre format** sur le même compte. L'aperçu doit annoncer
+      **0 opération** : l'empreinte vient du contenu, pas du fichier. Si des
+      doublons apparaissent, arrêtez-vous et signalez-le.
+- [ ] Si votre PDF est un **scan** (une image), l'application doit le dire
+      clairement et vous renvoyer vers le CSV ou l'Excel. Elle ne doit jamais
+      prétendre l'avoir lu.
 
 Si un encart **« Sans effet sur le solde »** apparaît, ce n'est pas une panne :
 le solde part de votre dernier relevé et n'additionne que ce qui vient après.

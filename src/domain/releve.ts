@@ -269,6 +269,35 @@ export function correspondanceUtilisable(correspondance: readonly RoleColonne[])
   return a('date') && (a('montant') || a('debit') || a('credit'))
 }
 
+/** Nombre de lignes examinées avant de renoncer à trouver un en-tête. */
+const PORTEE_ENTETE = 25
+
+export type Entete = { rang: number; correspondance: Correspondance }
+
+/**
+ * Cherche la ligne d'en-tête, qui n'est pas toujours la première.
+ *
+ * Un CSV commence par ses noms de colonnes ; un relevé en PDF commence par le
+ * nom de la banque, une adresse, un numéro de compte, et ne nomme ses colonnes
+ * qu'au bout de quelques lignes. Ne regarder que la première ligne rendrait
+ * tout PDF illisible pour une raison que personne ne pourrait deviner.
+ *
+ * La première ligne dont les intitulés donnent une correspondance utilisable
+ * gagne. Si aucune ne convient, on renvoie la plus large, de sorte que
+ * l'utilisateur ait quand même des menus à corriger plutôt qu'un écran vide.
+ */
+export function detecterEntete(lignes: readonly (readonly string[])[]): Entete {
+  const largeur = lignes.length === 0 ? 0 : Math.max(...lignes.map((ligne) => ligne.length))
+  const complete = (ligne: readonly string[]) =>
+    Array.from({ length: largeur }, (_, rang) => ligne[rang] ?? '')
+
+  for (const [rang, ligne] of lignes.slice(0, PORTEE_ENTETE).entries()) {
+    const correspondance = detecterCorrespondance(complete(ligne))
+    if (correspondanceUtilisable(correspondance)) return { rang, correspondance }
+  }
+  return { rang: 0, correspondance: detecterCorrespondance(complete(lignes[0] ?? [])) }
+}
+
 // --- Lecture des lignes ---------------------------------------------------------
 
 export type OperationBrute = {
@@ -320,9 +349,14 @@ function champ(
 export function lireOperations(
   lignes: readonly (readonly string[])[],
   correspondance: readonly RoleColonne[],
-  options: { premiereEstEntete?: boolean } = {},
+  options: { premiereEstEntete?: boolean; depuis?: number } = {},
 ): { operations: OperationBrute[]; rejets: RejetLigne[] } {
-  const entete = options.premiereEstEntete ?? premiereLigneEstEntete(lignes, correspondance)
+  // `depuis` l'emporte quand il est donné : un relevé en PDF a des lignes de
+  // garde avant son en-tête, et les refuser une à une remplirait la liste des
+  // rejets de bruit au milieu duquel une vraie erreur passerait inaperçue.
+  const premiereLigne =
+    options.depuis ??
+    ((options.premiereEstEntete ?? premiereLigneEstEntete(lignes, correspondance)) ? 1 : 0)
   const operations: OperationBrute[] = []
   const rejets: RejetLigne[] = []
 
@@ -332,7 +366,7 @@ export function lireOperations(
   // passerait pour un montant mille fois trop grand.
   const chiffres: string[] = []
   lignes.forEach((ligne, index) => {
-    if (entete && index === 0) return
+    if (index < premiereLigne) return
     for (const role of ['montant', 'debit', 'credit'] as const) {
       const valeur = champ(ligne, correspondance, role)
       if (valeur !== '') chiffres.push(valeur)
@@ -342,7 +376,7 @@ export function lireOperations(
   const montantDe = (valeur: string) => analyserMontantReleve(valeur, decimale)
 
   lignes.forEach((ligne, index) => {
-    if (entete && index === 0) return
+    if (index < premiereLigne) return
     const numero = index + 1
     const date = analyserDateReleve(champ(ligne, correspondance, 'date'))
     if (date === null) {

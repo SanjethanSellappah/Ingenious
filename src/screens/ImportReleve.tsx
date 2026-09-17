@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { analyserCsv, decoderTexte, NOMS_SEPARATEUR, type FichierCsv } from '../core/csv'
+import { lireDocumentReleve, NOMS_FORMAT, type DocumentReleve } from '../core/documentReleve'
 import { useFormatMontant } from '../app/discretion'
 import { ecrire } from '../app/magasin'
 import { useEtat } from '../app/useEtat'
@@ -9,7 +9,7 @@ import type { TypeCompte } from '../domain/etat'
 import { identifiant } from '../domain/identifiant'
 import {
   correspondanceUtilisable,
-  detecterCorrespondance,
+  detecterEntete,
   evenementsImport,
   lireOperations,
   NOMS_ROLE,
@@ -71,16 +71,25 @@ export function ImportReleve() {
   })
   const [nomCompte, setNomCompte] = useState('')
   const [typeCompte, setTypeCompte] = useState<TypeCompte>('courant')
-  // Fixé une fois pour toutes : le recalculer à chaque rendu changerait les
-  // empreintes sous l'aperçu, et le plan affiché ne serait plus celui qu'on écrit.
-  const [idNouveauCompte] = useState(() => identifiant('compte'))
+  /**
+   * Identifiant du compte à créer.
+   *
+   * Il ne change pas pendant qu'un aperçu est affiché — les empreintes en
+   * dépendent, et le plan montré ne serait plus celui qu'on écrit. Mais il doit
+   * changer **à chaque fois qu'on redemande un nouveau compte** : sans cela, un
+   * second import « vers un nouveau compte » porterait le même identifiant que
+   * le premier, et le compte créé juste avant changerait de nom sans un mot.
+   */
+  const [idNouveauCompte, setIdNouveauCompte] = useState(() => identifiant('compte'))
   const nouveau = choixCompte === NOUVEAU
   const compteId = nouveau ? idNouveauCompte : choixCompte
 
-  const [fichier, setFichier] = useState<(FichierCsv & { nom: string; encodage: string }) | null>(
-    null,
-  )
+  const [source, setSource] = useState<(DocumentReleve & { nom: string }) | null>(null)
+  const [feuilleActive, setFeuilleActive] = useState(0)
   const [correspondance, setCorrespondance] = useState<Correspondance>([])
+  // Rang de la ligne qui nomme les colonnes. Zéro pour un CSV, plus bas pour un
+  // relevé en PDF, qui commence par le nom de la banque et un numéro de compte.
+  const [rangEntete, setRangEntete] = useState(0)
   const [entete, setEntete] = useState(true)
   const [erreur, setErreur] = useState<string | null>(null)
 
@@ -96,10 +105,15 @@ export function ImportReleve() {
   const [occupe, setOccupe] = useState(false)
   const [resultat, setResultat] = useState<string | null>(null)
 
+  const grille = source?.grilles[feuilleActive] ?? null
+
+  /** Première ligne de données : l'en-tête s'y ajoute, ce qui la précède est écarté. */
+  const depuis = entete ? rangEntete + 1 : rangEntete
+
   const lecture = useMemo(() => {
-    if (fichier === null || !correspondanceUtilisable(correspondance)) return null
-    return lireOperations(fichier.lignes, correspondance, { premiereEstEntete: entete })
-  }, [fichier, correspondance, entete])
+    if (grille === null || !correspondanceUtilisable(correspondance)) return null
+    return lireOperations(grille.lignes, correspondance, { depuis })
+  }, [grille, correspondance, depuis])
 
   // Le plan demande un condensé par ligne, donc une opération asynchrone. Il est
   // rangé avec ce dont il a été tiré : tant que la lecture ou le compte ne
@@ -121,32 +135,51 @@ export function ImportReleve() {
       ? calcul.plan
       : null
 
+  /**
+   * Devine les colonnes d'une grille et les propose.
+   *
+   * On cherche la ligne qui nomme les colonnes plutôt que de supposer que c'est
+   * la première : un relevé en PDF s'ouvre sur le nom de la banque, une adresse
+   * et un numéro de compte avant d'arriver au tableau.
+   */
+  function proposerColonnes(lignes: string[][]) {
+    const trouve = detecterEntete(lignes)
+    setCorrespondance(trouve.correspondance)
+    setRangEntete(trouve.rang)
+    setEntete(premiereLigneEstEntete(lignes.slice(trouve.rang), trouve.correspondance))
+  }
+
   async function charger(brut: File) {
     setErreur(null)
     setResultat(null)
     try {
       // Le contenu est lu **avant** toute remise à zéro du champ : vider
       // `input.value` invalide la source, et la lecture reste alors en suspens.
-      const { texte, encodage } = decoderTexte(await brut.arrayBuffer())
-      const analyse = analyserCsv(texte)
-      if (analyse.lignes.length === 0) {
-        setErreur('Ce fichier ne contient aucune ligne.')
-        return
-      }
-      const largeur = Math.max(...analyse.lignes.map((ligne) => ligne.length))
-      const premiere = analyse.lignes[0]!
-      const devinee = detecterCorrespondance(
-        Array.from({ length: largeur }, (_, rang) => premiere[rang] ?? ''),
+      const octets = new Uint8Array(await brut.arrayBuffer())
+      const lu = await lireDocumentReleve(octets, brut.name)
+      // La première feuille qui ressemble à un relevé, plutôt que la première
+      // tout court : un classeur de banque s'ouvre parfois sur une page de garde.
+      const rang = Math.max(
+        0,
+        lu.grilles.findIndex((candidate) =>
+          correspondanceUtilisable(detecterEntete(candidate.lignes).correspondance),
+        ),
       )
-      setFichier({ ...analyse, nom: brut.name, encodage })
-      setCorrespondance(devinee)
-      setEntete(premiereLigneEstEntete(analyse.lignes, devinee))
+      setSource({ ...lu, nom: brut.name })
+      setFeuilleActive(rang)
+      proposerColonnes(lu.grilles[rang]?.lignes ?? [])
       setChoixEcarts({})
     } catch (e) {
       setErreur(e instanceof Error ? e.message : String(e))
     } finally {
       if (champFichier.current) champFichier.current.value = ''
     }
+  }
+
+  function changerFeuille(rang: number) {
+    setFeuilleActive(rang)
+    proposerColonnes(source?.grilles[rang]?.lignes ?? [])
+    setChoixEcarts({})
   }
 
   function changerRole(rang: number, role: string) {
@@ -209,7 +242,15 @@ export function ImportReleve() {
           ? 'Rien de nouveau : toutes ces lignes étaient déjà dans le journal.'
           : `${operations} opération(s) importée(s).`,
       )
-      setFichier(null)
+      // Le compte qui vient d'être créé devient le compte choisi : l'import
+      // suivant ira naturellement au même endroit, et l'identifiant réservé à
+      // un futur compte neuf est renouvelé.
+      if (nouveau) {
+        setChoixCompte(compteId)
+        setNomCompte('')
+        setIdNouveauCompte(identifiant('compte'))
+      }
+      setSource(null)
       setCalcul(null)
     } catch (e) {
       setErreur(e instanceof Error ? e.message : String(e))
@@ -223,8 +264,8 @@ export function ImportReleve() {
       <header>
         <h1>Importer un relevé</h1>
         <p>
-          Un fichier CSV de votre banque. Rien n’est écrit avant que vous ayez vu ce qui va être
-          ajouté.
+          Un relevé de votre banque, en CSV, en Excel ou en PDF. Rien n’est écrit avant que vous
+          ayez vu ce qui va être ajouté.
         </p>
       </header>
 
@@ -233,7 +274,10 @@ export function ImportReleve() {
         <select
           id="compte-import"
           value={choixCompte}
-          onChange={(e) => setChoixCompte(e.target.value)}
+          onChange={(e) => {
+            if (e.target.value === NOUVEAU) setIdNouveauCompte(identifiant('compte'))
+            setChoixCompte(e.target.value)
+          }}
         >
           <option value={NOUVEAU}>+ Nouveau compte…</option>
           {comptes.map((compte) => (
@@ -285,22 +329,22 @@ export function ImportReleve() {
         <input
           ref={champFichier}
           type="file"
-          accept="text/csv,.csv,.txt"
+          accept="text/csv,.csv,.txt,.xlsx,.xls,.pdf,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           hidden
           onChange={(e) => {
             const choisi = e.target.files?.[0]
             if (choisi) void charger(choisi)
           }}
         />
-        {fichier === null ? (
+        {source === null ? (
           <p className="discret">
-            Exportez le relevé depuis le site de votre banque, au format CSV, puis choisissez-le
-            ici.
+            Exportez le relevé depuis le site de votre banque : <strong>CSV</strong>,{' '}
+            <strong>Excel</strong> (.xlsx ou .xls) ou <strong>PDF</strong>. Le format est reconnu
+            tout seul.
           </p>
         ) : (
           <p className="discret">
-            {fichier.nom} · {fichier.lignes.length} ligne(s) · séparateur{' '}
-            {NOMS_SEPARATEUR[fichier.separateur]} · {fichier.encodage}
+            {source.nom} · {NOMS_FORMAT[source.format]} · {source.description}
           </p>
         )}
         <div className="actions">
@@ -310,7 +354,7 @@ export function ImportReleve() {
             onClick={() => champFichier.current?.click()}
             disabled={occupe}
           >
-            {fichier === null ? 'Choisir un fichier' : 'Changer de fichier'}
+            {source === null ? 'Choisir un fichier' : 'Changer de fichier'}
           </button>
         </div>
       </div>
@@ -321,7 +365,28 @@ export function ImportReleve() {
         </div>
       )}
 
-      {fichier !== null && (
+      {source !== null && source.grilles.length > 1 && (
+        <div className="champ">
+          <label htmlFor="feuille-import">Feuille</label>
+          <select
+            id="feuille-import"
+            value={feuilleActive}
+            onChange={(e) => changerFeuille(Number(e.target.value))}
+          >
+            {source.grilles.map((candidate, rang) => (
+              <option key={candidate.nom + String(rang)} value={rang}>
+                {candidate.nom} ({candidate.lignes.length} ligne(s))
+              </option>
+            ))}
+          </select>
+          <p className="discret">
+            Un classeur de banque s’ouvre parfois sur une page de garde : celle qui ressemble le
+            plus à un relevé est proposée d’abord.
+          </p>
+        </div>
+      )}
+
+      {source !== null && grille !== null && (
         <div className="carte">
           <h2>Colonnes</h2>
           <p className="discret">
@@ -329,17 +394,17 @@ export function ImportReleve() {
           </p>
           <label className="case">
             <input type="checkbox" checked={entete} onChange={(e) => setEntete(e.target.checked)} />
-            La première ligne contient les noms de colonnes
+            La ligne {rangEntete + 1} contient les noms de colonnes, pas des données
           </label>
           <ul className="liste">
             {correspondance.map((role, rang) => {
-              const exemple = (fichier.lignes[entete ? 1 : 0] ?? [])[rang] ?? ''
+              const exemple = (grille.lignes[depuis] ?? [])[rang] ?? ''
               return (
                 <li key={rang}>
                   <div className="champ">
                     <label htmlFor={`colonne-${rang}`}>
                       {entete
-                        ? ((fichier.lignes[0] ?? [])[rang] ?? `Colonne ${rang + 1}`)
+                        ? ((grille.lignes[rangEntete] ?? [])[rang] ?? `Colonne ${rang + 1}`)
                         : `Colonne ${rang + 1}`}
                     </label>
                     <select
