@@ -1114,3 +1114,26 @@ button.secondaire {
 .liste li a:focus-visible {
   border-bottom-color: var(--accent);
 }
+
+/* --- Libellé brut d'un relevé ---------------------------------------------- */
+
+/*
+ * Le pavé technique d'une banque, montré en entier sur l'écran d'un mouvement.
+ *
+ * `word-break` parce qu'un identifiant de créancier n'a aucune espace où se
+ * couper : sans cela il déborde de la carte et pousse toute la page de côté.
+ * Et la police à chasse fixe parce qu'on vient y lire une référence caractère
+ * par caractère, pas une phrase.
+ */
+.libelle-brut {
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', monospace;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--encre-faible);
+  background: var(--fond-enfonce);
+  border-radius: var(--rayon-petit, 1rem);
+  padding: 0.75rem 0.875rem;
+  margin: 0.5rem 0 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}

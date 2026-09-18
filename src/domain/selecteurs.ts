@@ -17,8 +17,9 @@ import { type CivilDate } from '../core/civilDate'
 import { dateAffichee } from '../core/recurrence'
 import { cents, negatif, type Cents } from '../core/money'
 import { valoriser, type Valorisation } from '../core/valorisation'
-import type { Etat, Exception, Label, Ligne, Releve } from './etat'
+import type { Etat, Exception, Label, Ligne, Releve, Transaction } from './etat'
 import { cleException, normaliserNom } from './etat'
+import { resumerLibelleBancaire } from './libelleBancaire'
 
 export type NatureMouvement = 'transaction' | 'virement' | 'occurrence'
 
@@ -32,7 +33,31 @@ export type Mouvement = {
   /** Instant de l'événement d'origine, pour départager une même journée. */
   ts: number
   source_id: string
+  /** Ce qu'on affiche : résumé quand la banque a écrit un pavé technique. */
   libelle?: string
+  /**
+   * Le libellé tel que la banque l'a écrit, quand il diffère.
+   *
+   * Il n'est pas affiché en liste — c'est tout l'objet du résumé — mais l'écran
+   * du mouvement le montre. Ce qui vient d'un relevé doit rester consultable
+   * mot pour mot : c'est la pièce justificative, et un résumé n'en est pas une.
+   */
+  libelle_complet?: string
+}
+
+/**
+ * Le libellé d'une transaction, résumé s'il vient d'un relevé.
+ *
+ * Le résumé ne s'applique **qu'aux lignes importées**. Une note écrite à la
+ * main est déjà celle qu'on voulait lire : la retoucher — ne serait-ce qu'en
+ * changeant sa casse — serait corriger quelqu'un chez lui.
+ */
+function libellesDe(transaction: Transaction): { libelle?: string; libelle_complet?: string } {
+  const note = transaction.note
+  if (note === undefined || note.trim() === '') return {}
+  if (transaction.origine !== 'csv') return { libelle: note }
+  const resume = resumerLibelleBancaire(note)
+  return resume === note ? { libelle: note } : { libelle: resume, libelle_complet: note }
 }
 
 /**
@@ -55,7 +80,7 @@ export function mouvementsDuCompte(etat: Etat, account_id: string): Mouvement[] 
       ts: transaction.ts,
       source_id: transaction.id,
       ...(transaction.label_id !== undefined ? { label_id: transaction.label_id } : {}),
-      ...(transaction.note !== undefined ? { libelle: transaction.note } : {}),
+      ...libellesDe(transaction),
     })
   }
 

@@ -193,7 +193,10 @@ await deposer(PLUS_LARGE, 'latin1', 'releve-1252.csv')
 const troisieme = (await page.locator('body').innerText()).replace(/\s+/g, ' ')
 dit('12.', 'encodage annoncé : ' + (/Windows-1252|UTF-8/.exec(troisieme)?.[0] ?? '(aucun)'))
 exiger(/Windows-1252/.test(troisieme), 'le fichier Windows-1252 a été lu comme de l’UTF-8')
-exiger(/RETRAIT DÉCEMBRE/.test(troisieme), 'l’accent a été abîmé à la lecture')
+// L'accent, et non la casse : l'aperçu abrège désormais les libellés, donc
+// « RETRAIT DÉCEMBRE » s'y lit « Retrait Décembre ». C'est le « é » qui dit si
+// l'encodage a été compris.
+exiger(/écembre/i.test(troisieme), 'l’accent a été abîmé à la lecture')
 
 const aEcrire3 = (await page.locator('.montant-principal').first().textContent())?.trim()
 dit('13.', 'sur un compte neuf, opérations annoncées : ' + aEcrire3)
@@ -294,6 +297,56 @@ exiger(
   soldes.length >= 2,
   `les deux comptes devaient valoir 41,04 € ; trouvé ${soldes.length} fois`,
 )
+
+// --- Libellés interminables : la liste doit rester lisible -------------------------
+
+await comptePourImport('Compte libellés')
+const PAVES = [
+  'Date;Libelle;Montant',
+  `${jour(2)};PRELEVEMENT PAYPAL EUROPE S.A.R.L. ET CIE S.C.A DU ${jour(2)} - EMETTEUR : LU96ZZZ00000000000000058 MDT - MOTIF : 1052796022080 - REF : 1052796022080 LIB;-53,90`,
+  `${jour(1)};VIREMENT INSTANTANE RECU DE M OU MME A DURANDEL MOTIF: VIR DE M OU MME A DURANDEL - REF : CH3W26250M212457;1623,00`,
+  `${jour(0)};MOTIF : NAVIGO ANNUEL - REF : 3;-90,80`,
+].join('\r\n')
+await page.setInputFiles('input[type=file]', {
+  name: 'paves.csv',
+  mimeType: 'text/csv',
+  buffer: Buffer.from(PAVES, 'utf8'),
+})
+await page.waitForTimeout(900)
+const apercuPaves = (await page.locator('body').innerText()).replace(/\s+/g, ' ')
+dit(
+  '24.',
+  'aperçu abrégé : ' + (/Prélèvement Paypal[^·]*/.exec(apercuPaves)?.[0]?.trim() ?? '(non abrégé)'),
+)
+exiger(/Prélèvement Paypal Europe/.test(apercuPaves), 'l’aperçu montre encore le pavé de la banque')
+exiger(
+  !/LU96ZZZ/.test(apercuPaves.split('Ce qui va être ajouté')[1] ?? ''),
+  'l’identifiant de créancier apparaît encore dans l’aperçu',
+)
+await page.click('button:has-text("Importer")')
+await page.waitForTimeout(1300)
+
+await page.goto(base + '#/comptes', { waitUntil: 'networkidle' })
+await page.waitForTimeout(500)
+await page.click('a:has-text("Compte libellés")')
+await page.waitForTimeout(700)
+const listeMouvements = (await page.locator('body').innerText()).replace(/\s+/g, ' ')
+dit('25.', 'liste : ' + (listeMouvements.split('Mouvements')[1] ?? '').slice(0, 120))
+exiger(/Prélèvement Paypal Europe/.test(listeMouvements), 'la liste n’abrège pas le libellé')
+exiger(/Virement A Durandel/.test(listeMouvements), 'le virement n’est pas abrégé')
+exiger(/Navigo Annuel/.test(listeMouvements), 'le motif n’a pas été retenu')
+exiger(
+  !/LU96ZZZ|1052796022080/.test(listeMouvements),
+  'la liste montre encore les références techniques',
+)
+
+// Le texte de la banque doit rester atteignable, entier, sur le mouvement.
+await page.click('text=Prélèvement Paypal Europe')
+await page.waitForTimeout(700)
+const detail = (await page.locator('body').innerText()).replace(/\s+/g, ' ')
+dit('26.', 'détail : ' + (detail.split('Libellé de la banque')[1] ?? '(absent)').slice(0, 90))
+exiger(/Libellé de la banque/.test(detail), 'le libellé d’origine n’est pas consultable')
+exiger(/LU96ZZZ00000000000000058/.test(detail), 'le libellé d’origine a été tronqué')
 
 // Un fichier qui n'est aucun des quatre doit être refusé en le disant.
 await page.goto(base + '#/import-releve', { waitUntil: 'networkidle' })

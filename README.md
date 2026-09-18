@@ -108,6 +108,29 @@ bibliothèques habituelles auraient ajouté plus de deux mégaoctets à une
 application qui en fait six cents kilo-octets ; ces lecteurs en coûtent
 vingt-six, et se relisent.
 
+### Des libellés lisibles
+
+Une banque ne décrit pas une opération, elle concatène des champs : deux cent
+dix caractères de référence, de mandat et d'IBAN pour dire « Prélèvement
+PayPal ». Dans une liste, chaque ligne occupe alors un écran et le montant
+disparaît. Les libellés importés sont donc **abrégés à l'affichage** — le
+journal, lui, garde le texte de la banque mot pour mot, et l'écran du mouvement
+le montre en entier.
+
+C'est une règle de présentation, pas une réécriture : elle s'améliore sans
+toucher à un seul événement, et l'empreinte qui reconnaît les doublons continue
+de porter sur le texte brut. Elle ne s'applique qu'aux lignes importées — une
+note écrite à la main est déjà celle qu'on voulait lire.
+
+**Pourquoi pas un modèle de langage local ?** Le plus petit modèle utilisable
+pèse quelques centaines de méga-octets contre six cents kilo-octets pour toute
+l'application, ses poids se téléchargent depuis un service tiers que la
+politique de sécurité interdit, et surtout il produit du texte *plausible* : sur
+un nom de commerçant, plausible n'est pas juste, et rien ne signalerait l'écart.
+Ici, ce qui est retiré est toujours une suite reconnaissable — une référence, un
+mandat, un IBAN, une date déjà affichée à côté — et ce qui reste n'est jamais
+inventé.
+
 Ce qu'ils ne font pas, et qui est dit à l'écran plutôt que découvert : **un PDF
 scanné ne donne rien**. Une photo de relevé ne contient pas de texte, et il n'y
 a pas de reconnaissance de caractères. Un PDF a par ailleurs beau ressembler à

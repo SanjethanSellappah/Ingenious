@@ -7,6 +7,7 @@ import { useEtat } from '../app/useEtat'
 import type { EntreeJournal } from '../domain/events'
 import type { TypeCompte } from '../domain/etat'
 import { identifiant } from '../domain/identifiant'
+import { resumerLibelleBancaire } from '../domain/libelleBancaire'
 import {
   correspondanceUtilisable,
   detecterEntete,
@@ -443,6 +444,10 @@ export function ImportReleve() {
             <p className="discret">
               opération(s) sur {plan.operations.length} lue(s), du {plan.debut} au {plan.fin}.
             </p>
+            <p className="discret">
+              Les libellés sont abrégés pour la lecture. Le texte complet de la banque reste
+              consultable sur chaque mouvement.
+            </p>
             {plan.deja.length > 0 && (
               <p className="discret">
                 {plan.deja.length} ligne(s) déjà importée(s) : elles portent le même identifiant que
@@ -455,7 +460,9 @@ export function ImportReleve() {
                   <div className="ligne-label">
                     <span>
                       <strong>
-                        {operation.libelle === '' ? 'Sans libellé' : operation.libelle}
+                        {operation.libelle === ''
+                          ? 'Sans libellé'
+                          : resumerLibelleBancaire(operation.libelle)}
                       </strong>
                       <span className="discret"> · {operation.date}</span>
                     </span>
@@ -483,7 +490,9 @@ export function ImportReleve() {
                     <div className="ligne-label">
                       <span>
                         {operation.date} ·{' '}
-                        {operation.libelle === '' ? 'Sans libellé' : operation.libelle}
+                        {operation.libelle === ''
+                          ? 'Sans libellé'
+                          : resumerLibelleBancaire(operation.libelle)}
                         <span className="discret">
                           {' '}
                           ↔ {operation.ressemblance?.note ?? 'saisie existante'}

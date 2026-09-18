@@ -13,6 +13,7 @@ import { cents, negatif, type Cents } from '../core/money'
 import { projeterSolde, type EcheanceProjetee, type Projection } from '../core/projection'
 import { resteAVivre, type ResteAVivre } from '../core/resteAVivre'
 import type { Etat, Transaction } from './etat'
+import { resumerLibelleBancaire } from './libelleBancaire'
 import { realiseesDe, soldeDuCompte } from './selecteurs'
 
 /** Horizon par défaut des projections : deux mois suffisent à voir le point bas. */
@@ -63,7 +64,13 @@ export function recurrencesDe(etat: Etat, account_id?: string): Recurrence[] {
  * pour une échéance récurrente.
  */
 function libelleTransaction(etat: Etat, transaction: Transaction): string {
-  if (transaction.note !== undefined && transaction.note.trim() !== '') return transaction.note
+  if (transaction.note !== undefined && transaction.note.trim() !== '') {
+    // Une ligne importée porte le pavé technique de la banque : on l'abrège
+    // pour la liste. Une note écrite à la main est rendue telle quelle.
+    return transaction.origine === 'csv'
+      ? resumerLibelleBancaire(transaction.note)
+      : transaction.note
+  }
   if (transaction.label_id !== undefined) {
     const label = etat.labels.get(transaction.label_id)
     if (label) return label.nom

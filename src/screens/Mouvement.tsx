@@ -4,6 +4,7 @@ import { dateCivile, estDateCivile, type CivilDate } from '../core/civilDate'
 import { negatif, type Cents } from '../core/money'
 import { ecrire } from '../app/magasin'
 import { useEtat } from '../app/useEtat'
+import { libelleRaccourci, resumerLibelleBancaire } from '../domain/libelleBancaire'
 import type { Exception, Transaction, Virement } from '../domain/etat'
 import { Montant } from '../ui/Montant'
 import { SaisieMontant } from '../ui/SaisieMontant'
@@ -63,7 +64,18 @@ function CorrigerTransaction({ transaction }: { transaction: Transaction }) {
   const [montant, setMontant] = useState<Cents | null>(transaction.montant_cents)
   const [date, setDate] = useState<CivilDate>(transaction.date)
   const [labelId, setLabelId] = useState(transaction.label_id ?? '')
-  const [note, setNote] = useState(transaction.note ?? '')
+  /**
+   * Le libellé d'origine est-il montré en entier juste au-dessus ?
+   *
+   * Dans ce cas le champ part **vide** : le recopier n'apporterait rien et
+   * obligerait à tout effacer avant d'écrire un nom à soi. Vide, il veut dire
+   * « garder le libellé de la banque », et l'invite le dit.
+   */
+  const brutAffiche =
+    transaction.origine === 'csv' &&
+    transaction.note !== undefined &&
+    libelleRaccourci(transaction.note)
+  const [note, setNote] = useState(brutAffiche ? '' : (transaction.note ?? ''))
   const [occupe, setOccupe] = useState(false)
   const [confirmeSuppression, setConfirmeSuppression] = useState(false)
 
@@ -84,7 +96,9 @@ function CorrigerTransaction({ transaction }: { transaction: Transaction }) {
             // transformer une dépense en rentrée par inadvertance.
             montant_cents: sortie ? negatif(absolu(montant)) : absolu(montant),
             ...(labelId !== '' ? { label_id: labelId } : {}),
-            note: note.trim(),
+            // Un champ laissé vide alors que le libellé de la banque est
+            // affiché au-dessus veut dire « n'y touche pas », pas « efface-le ».
+            ...(brutAffiche && note.trim() === '' ? {} : { note: note.trim() }),
           },
         },
       ])
@@ -112,6 +126,23 @@ function CorrigerTransaction({ transaction }: { transaction: Transaction }) {
           <Montant valeur={transaction.montant_cents} /> le {transaction.date}
         </p>
       </header>
+
+      {brutAffiche && transaction.note !== undefined && (
+        <div className="carte">
+          <h2>Libellé de la banque</h2>
+          {/* Le texte **stocké**, jamais le champ de saisie : celui-ci part vide
+              pour laisser écrire un nom à soi, et s'y fier ferait disparaître la
+              carte au moment précis où l'on vient y lire une référence.
+              Les listes montrent une version courte, sinon une seule opération
+              occupe tout l'écran ; le texte de la banque reste ici, entier,
+              parce que c'est la pièce justificative et qu'un résumé n'en est
+              pas une. */}
+          <p className="discret">
+            Affiché en liste : <strong>{resumerLibelleBancaire(transaction.note)}</strong>
+          </p>
+          <p className="libelle-brut">{transaction.note}</p>
+        </div>
+      )}
 
       {transaction.origine === 'reconciliation' && (
         <p className="avertissement">
@@ -156,6 +187,7 @@ function CorrigerTransaction({ transaction }: { transaction: Transaction }) {
           id="note-mouvement"
           value={note}
           autoComplete="off"
+          placeholder={brutAffiche ? 'Garder le libellé de la banque' : ''}
           onChange={(e) => setNote(e.target.value)}
         />
       </div>

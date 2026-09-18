@@ -143,6 +143,19 @@ parce que les colonnes y sont déclarées au lieu d'être devinées.
       clairement et vous renvoyer vers le CSV ou l'Excel. Elle ne doit jamais
       prétendre l'avoir lu.
 
+### Les libellés abrégés
+
+- [ ] Après l'import, regarder la liste des mouvements du compte. Chaque ligne
+      doit tenir en une ou deux lignes d'écran, pas en un paragraphe.
+- [ ] Vérifier qu'aucun **commerçant** n'a disparu au passage : « Prélèvement
+      Orange », « Virement A Durandel », « Navigo annuel » doivent rester
+      reconnaissables. Si un nom manque, c'est un vrai défaut — signalez-le avec
+      le libellé complet.
+- [ ] Ouvrir un mouvement importé : le **libellé de la banque** doit y figurer en
+      entier, tel quel, avec ses références.
+- [ ] Sur cet écran, le champ **Note** est vide : c'est voulu. Le laisser vide
+      garde le libellé de la banque ; y écrire quelque chose le remplace.
+
 Si un encart **« Sans effet sur le solde »** apparaît, ce n'est pas une panne :
 le solde part de votre dernier relevé et n'additionne que ce qui vient après.
 Des lignes plus anciennes enrichissent l'historique et les totaux par poste sans
