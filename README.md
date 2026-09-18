@@ -108,6 +108,18 @@ bibliothèques habituelles auraient ajouté plus de deux mégaoctets à une
 application qui en fait six cents kilo-octets ; ces lecteurs en coûtent
 vingt-six, et se relisent.
 
+### Le calendrier
+
+Une pastille par jour porteur d'échéance, et la courbe en dessous. Chaque jour
+est un **bouton** : l'ouvrir met en avant ses échéances, et chaque ligne mène à
+ce qu'elle désigne — le mouvement à corriger, ou l'abonnement qui la produit.
+Un jour sans rien le dit plutôt que de ne pas répondre.
+
+Cela paraît évident, et pourtant ces cases n'ont longtemps été que des blocs de
+texte : tout s'affichait juste, les tests passaient, mais appuyer ne faisait
+rien. Aucune assertion sur une fonction pure ne pouvait le voir — d'où l'audit
+`calendrier`, qui appuie.
+
 ### Des libellés lisibles
 
 Une banque ne décrit pas une opération, elle concatène des champs : deux cent

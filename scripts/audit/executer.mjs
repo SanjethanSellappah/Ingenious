@@ -41,6 +41,7 @@ const TOUS = [
   'reverrou',
   'reconciliation',
   'releve',
+  'calendrier',
   'extremes',
   'installation',
   'signales',

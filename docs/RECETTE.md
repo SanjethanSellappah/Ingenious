@@ -161,6 +161,17 @@ le solde part de votre dernier relevé et n'additionne que ce qui vient après.
 Des lignes plus anciennes enrichissent l'historique et les totaux par poste sans
 déplacer le solde.
 
+## 4 quater. Le calendrier
+
+- [ ] **Calendrier** : appuyer sur un jour qui porte une pastille. Le titre de la
+      liste doit nommer ce jour, et ne montrer que ses échéances.
+- [ ] Appuyer sur une ligne d'échéance : elle doit **ouvrir** le mouvement (pour
+      le corriger ou lui donner un poste) ou l'abonnement qui la produit.
+- [ ] Appuyer sur un jour vide : l'application doit dire qu'il n'y a rien, pas
+      rester muette.
+- [ ] « Voir tout le mois » revient à la liste complète ; changer de mois efface
+      le jour choisi.
+
 ## 5. Deux appareils
 
 - [ ] Installer aussi sur un second appareil, ou dans un autre navigateur.

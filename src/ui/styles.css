@@ -1137,3 +1137,33 @@ button.secondaire {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
+
+/* --- Jours du calendrier, désormais cliquables ---------------------------- */
+
+/*
+ * Chaque jour est un bouton.
+ *
+ * Il faut donc défaire ce que le navigateur impose à un bouton — sa police, son
+ * fond, son alignement — sans rien changer à ce qu'on voyait. Et signaler qu'on
+ * peut appuyer : un jour choisi se marque d'un contour d'accent, comme
+ * aujourd'hui se marque déjà.
+ */
+button.case-jour {
+  font: inherit;
+  color: inherit;
+  padding: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.case-jour.choisi {
+  border-color: var(--accent);
+  background: var(--accent-sombre);
+  font-weight: 700;
+}
+
+/* Aujourd'hui **et** choisi : le fond l'emporte, le contour reste. */
+.case-jour.aujourdhui.choisi {
+  border-color: var(--accent);
+}

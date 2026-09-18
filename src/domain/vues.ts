@@ -97,6 +97,7 @@ export function echeancesDuCompte(
       borne_haute_cents: transaction.montant_cents,
       estime: false,
       libelle: libelleTransaction(etat, transaction),
+      mouvement: { id: transaction.id, nature: 'transaction' },
     })
   }
 
@@ -112,6 +113,7 @@ export function echeancesDuCompte(
       borne_haute_cents: montant,
       estime: false,
       libelle: 'Virement',
+      mouvement: { id: virement.id, nature: 'virement' },
     })
   }
 

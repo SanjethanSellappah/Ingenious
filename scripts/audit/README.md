@@ -42,6 +42,7 @@ prouvent rien.
 | `panne` | disque qui refuse d'écrire : le bandeau, son contraste, son effacement |
 | `stockage` | IndexedDB absent, quota dépassé, `localStorage` bloqué |
 | `reverrou` | reverrouillage après deux minutes en arrière-plan, pas avant |
+| `calendrier` | le calendrier au doigt : cases cliquables, jour choisi qui filtre, chaque échéance qui mène à ce qu'elle désigne |
 | `releve` | import CSV, Excel (.xlsx et .xls) et PDF : réimport sans effet, même relevé reconnu d'un format à l'autre, écart de réconciliation retiré, Windows-1252, compte créé en cours de route, libellés abrégés en liste et conservés en entier sur le mouvement |
 | `reconciliation` | l'écart, son absence de double comptage, une dépense saisie après l'ancre |
 | `extremes` | noms de 68 caractères, montants à sept chiffres, saisies absurdes, soldes négatifs |

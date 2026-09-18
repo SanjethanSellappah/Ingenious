@@ -35,6 +35,14 @@ export type EcheanceProjetee = {
   libelle?: string
   /** Renvoie à la récurrence d'origine, pour que l'écran sache quoi réclamer. */
   reference?: { subscription_id: string; date_theorique: CivilDate }
+  /**
+   * Renvoie au mouvement déjà écrit, quand l'échéance en est un.
+   *
+   * Une échéance affichée sans ce renvoi est une impasse : on la voit, on veut
+   * la corriger ou lui donner un poste, et rien ne s'ouvre. Le calendrier s'en
+   * sert pour que chaque ligne mène à ce qu'elle désigne.
+   */
+  mouvement?: { id: string; nature: 'transaction' | 'virement' }
 }
 
 export type PointDeSerie = {
