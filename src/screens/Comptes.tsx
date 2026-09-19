@@ -245,7 +245,11 @@ export function DetailCompte() {
         {releves.length === 0 ? (
           <p className="discret">Aucun relevé enregistré.</p>
         ) : (
-          <ul className="liste">
+          /* Informative : un relevé est un constat daté, pas une entité qu'on
+             ouvre. Pour le corriger on en repose un — « Relever le solde »,
+             juste au-dessus — et l'ancien reste, puisque le journal n'efface
+             rien. */
+          <ul className="liste liste-informative">
             {releves.map((releve, rang) => (
               <li key={`${releve.date}-${releve.ts}`}>
                 <span>

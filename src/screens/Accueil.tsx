@@ -5,6 +5,7 @@ import { rappelSauvegarde } from '../app/automatismes'
 import { useEtat } from '../app/useEtat'
 import { compteCourantEffectif } from '../domain/selecteurs'
 import {
+  destinationEcheance,
   occurrencesAConfirmer,
   prochainesEcheances,
   projectionDuCompte,
@@ -121,9 +122,12 @@ export function Accueil() {
           <ul className="liste">
             {aConfirmer.slice(0, 4).map((echeance) => (
               <li key={`${echeance.reference?.subscription_id}-${echeance.date}`}>
-                <span>
+                {/* La ligne mène là où on peut agir. Une échéance qu'on voit
+                    sans pouvoir l'ouvrir est une impasse : c'est précisément
+                    pour la confirmer qu'on la regarde. */}
+                <Link to="/confirmer">
                   {jourCourt(echeance.date)} · {echeance.libelle}
-                </span>
+                </Link>
                 {echeance.montantConnu ? (
                   <Montant valeur={echeance.montant_cents} />
                 ) : (
@@ -168,10 +172,18 @@ export function Accueil() {
           <ul className="liste">
             {echeances.map((echeance, rang) => (
               <li key={`${echeance.date}-${echeance.libelle}-${rang}`}>
-                <span>
-                  {jourCourt(echeance.date)} · {echeance.libelle ?? 'Échéance'}
-                  {echeance.estime && <span className="discret"> · estimé</span>}
-                </span>
+                {(() => {
+                  const vers = destinationEcheance(echeance)
+                  const contenu = (
+                    <>
+                      {jourCourt(echeance.date)} · {echeance.libelle ?? 'Échéance'}
+                      {echeance.estime && <span className="discret"> · estimé</span>}
+                    </>
+                  )
+                  // Une échéance sans origine connue ne mène nulle part, et sa
+                  // ligne ne fait alors pas semblant d'être cliquable.
+                  return vers === null ? <span>{contenu}</span> : <Link to={vers}>{contenu}</Link>
+                })()}
                 <Montant valeur={echeance.montant_cents} />
               </li>
             ))}

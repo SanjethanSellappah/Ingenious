@@ -42,6 +42,7 @@ const TOUS = [
   'reconciliation',
   'releve',
   'calendrier',
+  'impasses',
   'extremes',
   'installation',
   'signales',

@@ -1167,3 +1167,19 @@ button.case-jour {
 .case-jour.aujourdhui.choisi {
   border-color: var(--accent);
 }
+
+/*
+ * Listes informatives.
+ *
+ * Marqueur, pas décoration : il déclare que ces lignes sont un constat et non
+ * une entrée qu'on ouvre. Une liste de dates qu'une règle produira, un relevé
+ * déjà posé — il n'y a rien derrière, et faire semblant serait pire.
+ *
+ * L'audit `impasses` s'en sert : toute autre ligne de liste doit mener quelque
+ * part. Le choix est ainsi pris à l'endroit où la liste s'écrit, et relu avec
+ * elle, plutôt que d'aller grossir une liste d'exceptions dans un script que
+ * personne ne rouvre.
+ */
+.liste-informative > li {
+  cursor: default;
+}

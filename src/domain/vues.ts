@@ -16,6 +16,24 @@ import type { Etat, Transaction } from './etat'
 import { resumerLibelleBancaire } from './libelleBancaire'
 import { realiseesDe, soldeDuCompte } from './selecteurs'
 
+/**
+ * Où mène une échéance.
+ *
+ * Un mouvement déjà écrit s'ouvre pour être corrigé ou catégorisé ; une
+ * occurrence encore à venir mène à l'abonnement qui la produit, puisque c'est
+ * lui qu'il faudrait changer. Une échéance sans origine connue ne mène nulle
+ * part — et sa ligne ne fait alors pas semblant d'être cliquable.
+ *
+ * La règle est ici, et non dans un écran, parce que trois écrans affichent les
+ * mêmes échéances. Une par écran, c'est deux occasions d'en oublier une : le
+ * calendrier a longtemps été le seul à ne rien relier, et personne ne l'a vu.
+ */
+export function destinationEcheance(echeance: EcheanceProjetee): string | null {
+  if (echeance.mouvement) return `/mouvements/${echeance.mouvement.id}`
+  if (echeance.reference) return `/abonnements/${echeance.reference.subscription_id}`
+  return null
+}
+
 /** Horizon par défaut des projections : deux mois suffisent à voir le point bas. */
 export const HORIZON_JOURS = 62
 

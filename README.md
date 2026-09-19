@@ -120,6 +120,28 @@ texte : tout s'affichait juste, les tests passaient, mais appuyer ne faisait
 rien. Aucune assertion sur une fonction pure ne pouvait le voir — d'où l'audit
 `calendrier`, qui appuie.
 
+### Les impasses
+
+Le calendrier n'était pas seul. La même vérification passée sur tous les écrans
+a trouvé l'oubli sur **l'accueil**, le plus visité de tous : les échéances « à
+confirmer » et les « prochaines échéances » s'affichaient sans mener nulle part
+— alors que c'est précisément pour agir dessus qu'on les regarde. Elles mènent
+maintenant, l'une vers la confirmation, l'autre vers le mouvement ou
+l'abonnement qui la produit.
+
+De là une règle, tenue par l'audit `impasses` à chaque construction :
+
+> **Toute ligne de liste mène quelque part, sauf celles d'une liste marquée
+> `liste-informative`.**
+
+Deux listes portent ce marqueur, et c'est voulu : les relevés déjà importés
+d'un compte (un fait daté, rien à ouvrir) et les trois prochaines dates qu'un
+abonnement produira (un aperçu de la règle qu'on est en train d'écrire). Le
+marqueur s'écrit là où la liste s'écrit, et non dans une liste d'exceptions
+enfouie dans l'audit — que personne ne rouvrirait. L'audit refuse d'ailleurs
+qu'un écran en déclare plus d'une : passé ce seuil, l'exception devient la
+règle.
+
 ### Des libellés lisibles
 
 Une banque ne décrit pas une opération, elle concatène des champs : deux cent

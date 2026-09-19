@@ -427,7 +427,10 @@ export function FormulaireAbonnement() {
         {apercu.length === 0 ? (
           <p className="discret">Aucune échéance à venir avec cette règle.</p>
         ) : (
-          <ul className="liste">
+          /* Informative, et déclarée comme telle : ces dates n'existent pas
+             encore, ce sont les trois premières que la règle qu'on est en train
+             d'écrire produira. Il n'y a rien à ouvrir — on est déjà dessus. */
+          <ul className="liste liste-informative">
             {apercu.map((occurrence) => (
               <li key={occurrence.date_theorique}>
                 <span>{occurrence.date_affichee}</span>

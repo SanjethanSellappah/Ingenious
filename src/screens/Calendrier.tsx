@@ -15,24 +15,9 @@ import { type Cents } from '../core/money'
 import { useFormatMontant } from '../app/discretion'
 import { useEtat } from '../app/useEtat'
 import { compteCourantEffectif } from '../domain/selecteurs'
-import type { EcheanceProjetee } from '../core/projection'
-import { echeancesDuCompte, projectionDuCompte } from '../domain/vues'
+import { destinationEcheance, echeancesDuCompte, projectionDuCompte } from '../domain/vues'
 import { CourbeSolde } from '../ui/CourbeSolde'
 import { Montant } from '../ui/Montant'
-
-/**
- * Où mène une échéance.
- *
- * Un mouvement déjà écrit s'ouvre pour être corrigé ou catégorisé ; une
- * occurrence encore à venir mène à l'abonnement qui la produit, puisque c'est
- * lui qu'il faudrait changer. Une échéance sans origine connue ne mène nulle
- * part — et sa ligne ne fait alors pas semblant d'être cliquable.
- */
-function destination(echeance: EcheanceProjetee): string | null {
-  if (echeance.mouvement) return `/mouvements/${echeance.mouvement.id}`
-  if (echeance.reference) return `/abonnements/${echeance.reference.subscription_id}`
-  return null
-}
 
 const NOMS_MOIS = [
   'janvier',
@@ -99,7 +84,7 @@ export function Calendrier() {
       courant.lignes.push({
         nom: echeance.libelle ?? 'Échéance',
         montant_cents: echeance.montant_cents,
-        vers: destination(echeance),
+        vers: destinationEcheance(echeance),
       })
       carte.set(echeance.date, courant)
     }

@@ -172,6 +172,20 @@ déplacer le solde.
 - [ ] « Voir tout le mois » revient à la liste complète ; changer de mois efface
       le jour choisi.
 
+## 4 quinquies. Rien qui ne mène nulle part
+
+Une ligne qu'on voit, on l'essaie. Si appuyer ne fait rien, l'application paraît
+cassée même quand tout est juste — et rien ne plante pour le signaler.
+
+- [ ] **Accueil** : appuyer sur une ligne de « À confirmer » — elle doit ouvrir
+      l'écran de confirmation.
+- [ ] **Accueil** : appuyer sur une ligne de « Prochaines échéances » — elle doit
+      ouvrir le mouvement ou l'abonnement qui la produit.
+- [ ] Faire le tour des écrans et **appuyer sur chaque ligne de liste**. Deux
+      seules doivent rester inertes, et c'est voulu : les **relevés déjà
+      importés** d'un compte, et les **trois prochaines échéances** affichées en
+      aperçu sur un abonnement. Partout ailleurs, une ligne muette est un défaut.
+
 ## 5. Deux appareils
 
 - [ ] Installer aussi sur un second appareil, ou dans un autre navigateur.
