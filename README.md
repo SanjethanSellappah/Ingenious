@@ -120,6 +120,12 @@ texte : tout s'affichait juste, les tests passaient, mais appuyer ne faisait
 rien. Aucune assertion sur une fonction pure ne pouvait le voir — d'où l'audit
 `calendrier`, qui appuie.
 
+Chaque date affichée porte son mois — `03/09`, jamais `03`. La grille écrit bien
+le mois en haut, mais une liste se fait défiler et la grille sort de l'écran ;
+il ne reste alors qu'un nombre à deux chiffres. Une date lue pour un autre mois
+que le sien, c'est une échéance qu'on croit passée. Les trois `jourCourt`
+recopiés d'écran en écran sont devenus un seul `src/ui/dates.ts`.
+
 ### Les impasses
 
 Le calendrier n'était pas seul. La même vérification passée sur tous les écrans

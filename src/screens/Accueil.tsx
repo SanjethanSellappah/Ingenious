@@ -12,6 +12,7 @@ import {
   resteAVivreDe,
 } from '../domain/vues'
 import { CourbeSolde } from '../ui/CourbeSolde'
+import { jourEtMois } from '../ui/dates'
 import { Icone } from '../ui/Icone'
 import { Montant } from '../ui/Montant'
 
@@ -66,9 +67,9 @@ export function Accueil() {
             <Montant valeur={rav.montant_cents} principal neutre />
             <p className="discret">
               {rav.horizonParDefaut ? (
-                <>Aucune rentrée connue d’ici le {jourCourt(rav.horizon)}</>
+                <>Aucune rentrée connue d’ici le {jourEtMois(rav.horizon)}</>
               ) : (
-                <>Jusqu’à la prochaine rentrée, le {jourCourt(rav.horizon)}</>
+                <>Jusqu’à la prochaine rentrée, le {jourEtMois(rav.horizon)}</>
               )}
               {' · '}
               {composition(rav.composition.echeances, rav.composition.echeancesEstimees)}
@@ -126,7 +127,7 @@ export function Accueil() {
                     sans pouvoir l'ouvrir est une impasse : c'est précisément
                     pour la confirmer qu'on la regarde. */}
                 <Link to="/confirmer">
-                  {jourCourt(echeance.date)} · {echeance.libelle}
+                  {jourEtMois(echeance.date)} · {echeance.libelle}
                 </Link>
                 {echeance.montantConnu ? (
                   <Montant valeur={echeance.montant_cents} />
@@ -148,7 +149,7 @@ export function Accueil() {
         {alerte && (
           <p className="avertissement">
             <strong>Attention :</strong> au pire des estimations, le solde passe sous zéro le{' '}
-            {jourCourt(projection.pointBasPessimiste.date)} (
+            {jourEtMois(projection.pointBasPessimiste.date)} (
             {formater(projection.pointBasPessimiste.solde_cents)}).
           </p>
         )}
@@ -176,7 +177,7 @@ export function Accueil() {
                   const vers = destinationEcheance(echeance)
                   const contenu = (
                     <>
-                      {jourCourt(echeance.date)} · {echeance.libelle ?? 'Échéance'}
+                      {jourEtMois(echeance.date)} · {echeance.libelle ?? 'Échéance'}
                       {echeance.estime && <span className="discret"> · estimé</span>}
                     </>
                   )
@@ -200,9 +201,4 @@ function composition(total: number, estimees: number): string {
   const base = total === 1 ? '1 échéance connue' : `${total} échéances connues`
   if (estimees === 0) return base
   return `${base}, dont ${estimees} estimée${estimees > 1 ? 's' : ''}`
-}
-
-function jourCourt(date: string): string {
-  const [, mois, jour] = date.split('-')
-  return `${jour}/${mois}`
 }

@@ -2,6 +2,7 @@ import { useId, useMemo, useState } from 'react'
 import { type Cents } from '../core/money'
 import { useFormatMontant } from '../app/discretion'
 import type { PointDeSerie, Projection } from '../core/projection'
+import { jourEtMois } from './dates'
 
 /**
  * Courbe de solde projeté.
@@ -144,15 +145,15 @@ export function CourbeSolde({
           un début et une fin de période : on croyait voir le solde d'aujourd'hui
           à droite et la prévision à gauche, soit exactement l'inverse du tracé. */}
       <p className="courbe-dates" aria-hidden="true">
-        <span>{jourCourt(serie[0]!.date)}</span>
+        <span>{jourEtMois(serie[0]!.date)}</span>
         <span className="discret">aujourd’hui → dans {serie.length - 1} jours</span>
-        <span>{jourCourt(serie[serie.length - 1]!.date)}</span>
+        <span>{jourEtMois(serie[serie.length - 1]!.date)}</span>
       </p>
 
       <figcaption>
         {survol !== null ? (
           <>
-            <strong>{jourCourt(survol.date)}</strong> · {formater(survol.solde_cents)}
+            <strong>{jourEtMois(survol.date)}</strong> · {formater(survol.solde_cents)}
             {survol.incertain && (
               <span className="discret">
                 {' '}
@@ -162,12 +163,12 @@ export function CourbeSolde({
           </>
         ) : (
           <>
-            Point bas le <strong>{jourCourt(projection.pointBas.date)}</strong> à{' '}
+            Point bas le <strong>{jourEtMois(projection.pointBas.date)}</strong> à{' '}
             <strong>{formater(projection.pointBas.solde_cents)}</strong>
             {projection.premiereEstimation !== null && (
               <span className="discret">
                 {' '}
-                · estimé à partir du {jourCourt(projection.premiereEstimation)}
+                · estimé à partir du {jourEtMois(projection.premiereEstimation)}
               </span>
             )}
           </>
@@ -175,11 +176,6 @@ export function CourbeSolde({
       </figcaption>
     </figure>
   )
-}
-
-function jourCourt(date: string): string {
-  const [, mois, jour] = date.split('-')
-  return `${jour}/${mois}`
 }
 
 /** Échelles et bornes du tracé. `null` quand il n'y a rien à tracer. */

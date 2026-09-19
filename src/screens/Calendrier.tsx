@@ -17,22 +17,8 @@ import { useEtat } from '../app/useEtat'
 import { compteCourantEffectif } from '../domain/selecteurs'
 import { destinationEcheance, echeancesDuCompte, projectionDuCompte } from '../domain/vues'
 import { CourbeSolde } from '../ui/CourbeSolde'
+import { NOMS_MOIS, jourEnLettres, jourEtMois } from '../ui/dates'
 import { Montant } from '../ui/Montant'
-
-const NOMS_MOIS = [
-  'janvier',
-  'février',
-  'mars',
-  'avril',
-  'mai',
-  'juin',
-  'juillet',
-  'août',
-  'septembre',
-  'octobre',
-  'novembre',
-  'décembre',
-]
 
 /**
  * Calendrier mensuel.
@@ -206,7 +192,7 @@ export function Calendrier() {
           <h2>
             {jourChoisi === null
               ? 'Échéances du mois'
-              : `Échéances du ${Number(jourChoisi.slice(8))} ${NOMS_MOIS[mois - 1]}`}
+              : `Échéances du ${jourEnLettres(jourChoisi)}`}
           </h2>
 
           {jourChoisi !== null && (
@@ -224,15 +210,22 @@ export function Calendrier() {
               {jours.map(([date, ligne]) =>
                 ligne.lignes.map((detail, rang) => (
                   <li key={`${date}-${String(rang)}`}>
-                    {detail.vers === null ? (
-                      <span>
-                        {date.slice(8)} · {detail.nom}
-                      </span>
-                    ) : (
-                      <Link to={detail.vers}>
-                        {date.slice(8)} · {detail.nom}
-                      </Link>
-                    )}
+                    {(() => {
+                      // Le texte s'écrit une fois, et les deux formes s'en
+                      // servent. Recopié dans chaque branche, il finissait par
+                      // diverger — et la branche muette, rarement rendue, aurait
+                      // gardé la date sans son mois sans que rien ne le dise.
+                      const contenu = (
+                        <>
+                          {jourEtMois(date)} · {detail.nom}
+                        </>
+                      )
+                      return detail.vers === null ? (
+                        <span>{contenu}</span>
+                      ) : (
+                        <Link to={detail.vers}>{contenu}</Link>
+                      )
+                    })()}
                     <Montant valeur={detail.montant_cents} />
                   </li>
                 )),

@@ -171,6 +171,8 @@ déplacer le solde.
       rester muette.
 - [ ] « Voir tout le mois » revient à la liste complète ; changer de mois efface
       le jour choisi.
+- [ ] Faire défiler la liste des échéances jusqu'à perdre la grille de vue :
+      chaque ligne doit porter **jour et mois** (`03/09`), pas le seul quantième.
 
 ## 4 quinquies. Rien qui ne mène nulle part
 

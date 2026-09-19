@@ -125,6 +125,21 @@ exiger(
   'aucune ligne ne mène à l’abonnement qui la produit',
 )
 
+// --- Chaque date porte son mois ----------------------------------------------------
+
+// Une liste se fait défiler, et la grille des jours sort alors de l'écran : il
+// ne reste qu'un nombre à deux chiffres. « 03 » ne dit pas de quel mois il
+// parle, et une échéance mal datée est une échéance qu'on croit passée.
+const datesLues = await toutesLignes.evaluateAll((noeuds) =>
+  noeuds.map((n) => (n.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 5)),
+)
+const sansMois = datesLues.filter((d) => !/^\d{2}\/\d{2}$/.test(d))
+dit('7c.', 'dates lues : ' + [...new Set(datesLues)].slice(0, 4).join(', '))
+exiger(
+  sansMois.length === 0,
+  `${sansMois.length} ligne(s) n’affichent pas le mois : ${[...new Set(sansMois)].join(', ')}`,
+)
+
 const lien = page.locator('.carte:has(.liste) .liste li a').first()
 
 await lien.click()

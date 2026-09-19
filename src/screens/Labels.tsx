@@ -5,22 +5,8 @@ import { cents } from '../core/money'
 import { useFormatMontant } from '../app/discretion'
 import { useEtat } from '../app/useEtat'
 import { depensesParLabel } from '../domain/selecteurs'
+import { NOMS_MOIS } from '../ui/dates'
 import { Montant } from '../ui/Montant'
-
-const NOMS_MOIS = [
-  'janvier',
-  'février',
-  'mars',
-  'avril',
-  'mai',
-  'juin',
-  'juillet',
-  'août',
-  'septembre',
-  'octobre',
-  'novembre',
-  'décembre',
-]
 
 /**
  * Dépenses par label.
